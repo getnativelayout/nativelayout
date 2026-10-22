@@ -1,4 +1,4 @@
-
+"""Identity of the repetitions of a `for` (port of Scopes.kt, section 5.7)."""
 from __future__ import annotations
 
 SEP = "~"
@@ -7,7 +7,7 @@ _HEX = "0123456789ABCDEF"
 
 
 def key_of_item(item) -> str | None:
-    """Chave automatica de um item: campo `key`, ou senao `id`. So texto e inteiros."""
+    """Automatic key of an item: its field `key`, or else its field `id`. Only text and whole numbers."""
     if not isinstance(item, dict):
         return None
     for field in _KEY_FIELDS:
@@ -22,7 +22,7 @@ def key_of_item(item) -> str | None:
 
 
 def encode(s: str) -> str:
-    """Letras, digitos, `_`, `-` e `.` ficam; o resto vira %XX (nunca aparece `/`, `:` ou `~`)."""
+    """Letters, digits, `_`, `-` and `.` stay; the rest becomes %XX (`/`, `:` and `~` never appear)."""
     out = []
     for c in s.encode("utf-8"):
         plain = (97 <= c <= 122) or (65 <= c <= 90) or (48 <= c <= 57) or c in (95, 45, 46)
@@ -31,7 +31,7 @@ def encode(s: str) -> str:
 
 
 def token(key: str | None, index: int) -> str:
-    """Token de uma repeticao: a chave, ou `%p` + posicao quando nao ha chave."""
+    """Token of a repetition: its key, or `%p` + the position when there is no key."""
     return encode(key) if key is not None else f"%p{index}"
 
 
