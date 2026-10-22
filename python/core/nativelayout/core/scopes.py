@@ -1,4 +1,4 @@
-"""Identidade das repeticoes de um `for` (port de Scopes.kt, secao 5.7)."""
+
 from __future__ import annotations
 
 SEP = "~"
