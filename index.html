@@ -12,97 +12,132 @@
 <body>
 <x-dc>
 <helmet>
-<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&amp;family=JetBrains+Mono:wght@400;500&amp;display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700&amp;family=JetBrains+Mono:wght@400;500&amp;display=swap" rel="stylesheet">
 <style>
-body{margin:0;background:#0D1117;color:#E6EDF3;font-family:'Space Grotesk',system-ui,sans-serif}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{margin:0}
+.page{--bg:#fff;--fg:#1F2328;--mut:#5F6B76;--line:#CBD3DB;--link:#0B63CE;--hero:#E8EBEE;--qs:#EEF5FD;--qsl:#BCD3F0;--code:#F3F5F7;--foot:#2E3A42;--bar:#fff;
+ background:var(--bg);color:var(--fg);font-family:'DM Sans',system-ui,sans-serif;font-size:18px;line-height:1.6;min-height:100vh;-webkit-font-smoothing:antialiased}
+.page:has(#dm:checked){--bg:#0F1419;--fg:#E6EDF3;--mut:#9BA7B4;--line:#30363D;--link:#58A6FF;--hero:#1B222A;--qs:#10253F;--qsl:#1F4A80;--code:#161B22;--foot:#0A0E12;--bar:#0F1419}
+@media(max-width:430px){.ib.gh{display:none}}
+.hid{position:absolute;opacity:0;pointer-events:none}
 a{color:inherit;text-decoration:none}
-.wrap{max-width:1120px;margin:0 auto;padding:0 24px}
-.nav{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;padding:20px 0}
-.brand{font-weight:700;font-size:20px;letter-spacing:-.01em}
-.brand b{color:#79B8FF}
-.navlinks{display:flex;flex-wrap:wrap;align-items:center;gap:20px;font-size:15px;color:#9BA7B4}
-.navlinks a:hover{color:#E6EDF3}
-.btn{display:inline-flex;align-items:center;min-height:48px;padding:0 22px;border-radius:10px;font-weight:700;font-size:16px;box-sizing:border-box}
-.btn.p{background:var(--accent);color:#fff}
-.btn.s{border:1px solid #3D444D;color:#E6EDF3}
-.row{display:flex;flex-wrap:wrap;gap:12px}
-.hero{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:48px;align-items:center;padding:48px 0 80px}
-h1{font-size:clamp(36px,6vw,64px);line-height:1.05;margin:0 0 20px;letter-spacing:-.03em}
-h2{font-size:clamp(28px,4vw,40px);line-height:1.1;margin:0 0 16px;letter-spacing:-.02em}
-.lead{font-size:19px;line-height:1.55;color:#9BA7B4;margin:0 0 28px;max-width:520px}
-.tag{font-family:'JetBrains Mono',monospace;font-size:13px;color:#79B8FF;margin:0 0 16px}
-.phonewrap{display:flex;justify-content:center}
-.phone{width:270px;max-width:100%;box-sizing:border-box;border:8px solid #2A313C;border-radius:36px;background:#F2F2F2;color:#111;padding:22px 16px 26px;display:flex;flex-direction:column;gap:10px}
-.phone h3{margin:0;font-size:24px}
-.ph-m{margin:0;font-size:14px;color:#555}
-.ph-in{border:1px solid #BBB;border-radius:8px;padding:10px;font-size:14px;color:#666;background:#fff}
-.ph-bt{background:#1F6FEB;color:#fff;font-weight:700;text-align:center;padding:11px;border-radius:8px;font-size:14px}
-.card{background:#EDE9FE;border-radius:12px;padding:12px 14px;font-size:14px}
-.card.b{font-weight:700}
-.sec{padding:72px 0;border-top:1px solid #21262D}
-.two{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:20px}
-pre{margin:0;background:#161B22;border:1px solid #30363D;border-radius:14px;padding:20px;font-family:'JetBrains Mono',monospace;font-size:13.5px;line-height:1.65;overflow-x:auto;color:#E6EDF3}
-.k{color:#79B8FF}.v{color:#7EE787}.c{color:#8B949E}
-.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:16px;margin-top:32px}
-.f{background:#161B22;border:1px solid #30363D;border-radius:14px;padding:24px}
-.f i{font-style:normal;font-family:'JetBrains Mono',monospace;font-size:13px;color:#79B8FF}
-.f h3{margin:10px 0 8px;font-size:20px}
-.f p{margin:0;color:#9BA7B4;line-height:1.55;font-size:16px}
-.chips{display:flex;flex-wrap:wrap;gap:10px;margin-top:28px}
-.chip{border:1px solid #30363D;border-radius:999px;padding:9px 16px;font-size:15px;color:#9BA7B4}
-.chip.on{border-color:#2EA043;color:#7EE787;font-weight:700}
-.note{margin:20px 0 0;font-size:15px;line-height:1.55;color:#9BA7B4;max-width:640px}
-.note a{color:#79B8FF}
-.quote{margin:28px 0 0;padding:20px 24px;border-left:3px solid #1F6FEB;background:#161B22;border-radius:0 14px 14px 0;color:#9BA7B4;line-height:1.55;font-size:16px;max-width:760px}
-.quote a{color:#79B8FF}
-.cta{text-align:center;padding:88px 0}
-.cta .row{justify-content:center}
-.foot{border-top:1px solid #21262D;padding:28px 0;color:#9BA7B4;font-size:14px;display:flex;flex-wrap:wrap;justify-content:space-between;gap:8px}
+.top{position:sticky;top:0;z-index:30;background:var(--bar);border-bottom:1px solid var(--line)}
+.top .in{display:flex;align-items:center;justify-content:space-between;height:64px;padding:0 12px;max-width:1200px;margin:0 auto}
+.logo{display:flex;align-items:center;gap:8px;font-size:21px;font-weight:500;letter-spacing:-.01em}
+.logo svg{flex:none}
+.chip{background:#CFE6FB;color:#0B2E4F;border-radius:8px;padding:2px 12px;font-size:20px;line-height:1.3}
+.page:has(#dm:checked) .chip{background:#1F3F63;color:#CFE6FB}
+.icons{display:flex;align-items:center;gap:0}
+.ib{display:flex;align-items:center;justify-content:center;width:38px;height:38px;border-radius:50%;cursor:pointer;color:var(--fg);background:none;border:0}
+.ib:hover{background:var(--code)}
+.ib svg{width:26px;height:26px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round}
+.ib svg .f{fill:currentColor;stroke:none}
+.drawer{display:none;position:absolute;top:64px;right:0;left:0;background:var(--bar);border-bottom:1px solid var(--line);padding:8px 20px 16px;box-shadow:0 12px 24px rgba(0,0,0,.12)}
+.page:has(#mn:checked) .drawer{display:block}
+.drawer a{display:block;padding:12px 4px;border-bottom:1px solid var(--line);font-size:18px}
+.sub{position:sticky;top:64px;z-index:25;background:var(--bar);border-bottom:1px solid var(--line);box-shadow:0 2px 6px rgba(0,0,0,.06)}
+.sub details{max-width:1200px;margin:0 auto}
+.sub summary{list-style:none;cursor:pointer;display:flex;align-items:center;gap:12px;padding:12px 20px;font-size:18px;white-space:nowrap}
+.sub summary::-webkit-details-marker{display:none}
+.sub summary svg{width:26px;height:26px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;flex:none}
+.sub summary span:first-of-type{flex:none}
+.sub summary .sep{color:var(--mut)}
+.sub summary #cur{color:var(--mut);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sub .list{padding:4px 20px 14px 58px;display:flex;flex-direction:column}
+.sub .list a{padding:8px 0;color:var(--link)}
+.banner{background:linear-gradient(90deg,#1565D8,#7B3FE4);color:#fff;text-align:center;padding:22px 20px;font-size:21px}
+.banner a{color:#C7DDFF;text-decoration:underline}
+.main{max-width:860px;margin:0 auto;padding:0 20px}
+.hero{background:var(--hero);border-radius:14px;padding:22px 26px 28px;margin:32px 0}
+.hero .crumb{display:flex;justify-content:space-between;align-items:center;color:var(--mut);font-size:20px}
+.hero h1{font-size:clamp(44px,9vw,72px);line-height:1.05;margin:14px 0 14px;letter-spacing:-.03em;font-weight:700}
+.hero p{margin:0;font-size:21px}
+.lead{font-size:22px;line-height:1.6;margin:0 0 24px}
+.cards{display:grid;gap:18px;margin:0 0 28px}
+.card{display:block;border:1px solid var(--line);border-radius:12px;padding:22px 26px;transition:border-color .15s,transform .15s}
+.card:hover{border-color:var(--link);transform:translateY(-2px)}
+.card.rec{background:var(--qs);border-color:var(--qsl)}
+.card h3{margin:0;font-size:30px;font-weight:500;color:var(--link);display:flex;align-items:center;gap:12px}
+.card h3 svg{width:30px;height:30px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.card small{display:block;color:var(--link);font-size:21px;margin:2px 0 8px}
+.card p{margin:8px 0 0;font-size:22px;line-height:1.55}
+h2{font-size:clamp(30px,6vw,40px);line-height:1.15;margin:56px 0 16px;letter-spacing:-.02em;font-weight:500;scroll-margin-top:140px}
+h2 a{color:inherit}
+p.t{margin:0 0 20px}
+.code{background:var(--code);border:1px solid var(--line);border-radius:10px;margin:0 0 22px;overflow:hidden}
+.code .cap{padding:8px 16px;border-bottom:1px solid var(--line);font-family:'JetBrains Mono',monospace;font-size:14px;color:var(--mut)}
+pre{margin:0;padding:16px;font-family:'JetBrains Mono',monospace;font-size:14.5px;line-height:1.65;overflow-x:auto;color:var(--fg)}
+.k{color:#1A6FD6}.v{color:#1B8A3A}.c{color:#7B8794}
+.page:has(#dm:checked) .k{color:#79B8FF}.page:has(#dm:checked) .v{color:#7EE787}
+.fl{display:grid;gap:14px;margin:0 0 20px}
+.fl .it{border:1px solid var(--line);border-radius:12px;padding:16px 20px}
+.fl .it b{display:block;font-size:20px;font-weight:500;color:var(--link)}
+.fl .it span{font-size:17px;color:var(--mut);line-height:1.5}
+.fl .it em{font-style:normal;font-size:12px;font-family:'JetBrains Mono',monospace;color:#1B8A3A;border:1px solid currentColor;border-radius:999px;padding:1px 8px;margin-left:8px;vertical-align:middle}
+.tg{border:1px solid var(--line);border-radius:12px;overflow:hidden;margin:0 0 16px}
+.tg .r{display:grid;grid-template-columns:1.2fr 1fr .9fr;gap:8px;padding:12px 18px;border-top:1px solid var(--line);font-size:17px}
+.tg .r:first-child{border-top:0;background:var(--code);font-weight:700}
+.st{font-weight:700}.st.ok{color:#1B8A3A}.st.wip{color:#B5760A}.st.pl{color:var(--mut)}
+.note{color:var(--mut);font-size:17px;margin:0 0 20px}
+.note a,.link{color:var(--link);text-decoration:underline}
+.help{border-top:1px solid var(--line);margin-top:56px;padding-top:28px;text-align:center}
+.help p{margin:0 0 14px}
+.help .row{display:flex;justify-content:center;gap:14px}
+.help a{border:1px solid var(--line);border-radius:999px;padding:8px 22px;font-size:17px}
+.help a:hover{border-color:var(--link);color:var(--link)}
+.src{font-style:italic;font-size:18px;color:var(--fg);margin:26px 0 40px}
+.src a{color:var(--link)}
+.foot{background:var(--foot);color:#E8EDF1;text-align:center;padding:56px 20px 44px}
+.foot .brand{display:flex;align-items:center;justify-content:center;gap:14px;font-size:48px;font-weight:500;letter-spacing:-.02em;margin-bottom:28px}
+.soc{display:flex;justify-content:center;gap:26px;margin-bottom:28px}
+.soc a{width:48px;height:48px;color:#C2CCD3;display:flex;align-items:center;justify-content:center}
+.soc a:hover{color:#fff}
+.soc svg{width:44px;height:44px;fill:currentColor}
+.soc svg.s{fill:none;stroke:currentColor;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round}
+.foot hr{max-width:780px;border:0;border-top:1px solid #5A6670;margin:0 auto 26px}
+.foot p{max-width:640px;margin:0 auto 20px;font-size:21px;line-height:1.55;color:#E3E9ED}
+.foot p a{text-decoration:underline}
+.fl2{display:flex;flex-wrap:wrap;justify-content:center;gap:12px 34px;font-size:21px;margin:26px 0}
+.built{display:inline-flex;align-items:center;gap:12px;background:#F3F4F6;color:#111;border-radius:16px;padding:12px 22px;font-size:22px}
+.built b{font-size:32px;font-weight:700;letter-spacing:-.02em}
+@media(min-width:760px){.cards.two{grid-template-columns:1fr 1fr}.fl{grid-template-columns:1fr 1fr}}
 </style>
 </helmet>
-<div style="--accent: {{accent}}; width: 100%; box-sizing: border-box">
-<div class="wrap">
-<div class="nav">
-<div class="brand">native<b>layout</b></div>
-<div class="navlinks">
-<a href="https://github.com/getnativelayout/nativelayout/blob/main/SPEC.md">Specification</a>
-<a href="https://github.com/getnativelayout/nativelayout/blob/main/android/README.md">Android guide</a>
-<a href="https://doi.org/10.5281/zenodo.23470439">Article</a>
-<a class="btn s" href="https://github.com/getnativelayout/nativelayout">GitHub</a>
+<div class="page">
+<input type="checkbox" id="dm" class="hid"><input type="checkbox" id="mn" class="hid">
+<div class="top"><div class="in">
+<a class="logo" href="#top"><svg width="36" height="36" viewBox="0 0 32 32"><rect width="32" height="32" rx="8" fill="#0B63CE"/><path d="M9 22V10l6 8V10M19 10v12h5" fill="none" stroke="#fff" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg><span>nativelayout</span><span class="chip">Docs</span></a>
+<div class="icons">
+<a class="ib" href="https://github.com/getnativelayout/nativelayout/search?q=nativelayout" aria-label="Search"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="6.5"/><path d="M16 16l5 5"/></svg></a>
+<label class="ib" for="dm" aria-label="Theme"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="4.2"/><path d="M12 2.5v2.2M12 19.3v2.2M2.5 12h2.2M19.3 12h2.2M5.3 5.3l1.6 1.6M17.1 17.1l1.6 1.6M18.7 5.3l-1.6 1.6M6.9 17.1l-1.6 1.6"/></svg></label>
+<a class="ib gh" href="https://github.com/getnativelayout/nativelayout" aria-label="GitHub"><svg viewBox="0 0 24 24"><g class="f"><circle cx="5" cy="5" r="2"/><circle cx="12" cy="5" r="2"/><circle cx="19" cy="5" r="2"/><circle cx="5" cy="12" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="19" cy="12" r="2"/><circle cx="5" cy="19" r="2"/><circle cx="12" cy="19" r="2"/><circle cx="19" cy="19" r="2"/></g></svg></a>
+<label class="ib" for="mn" aria-label="Menu"><svg viewBox="0 0 24 24"><path d="M3 6h18M3 12h18M3 18h18"/></svg></label>
+</div></div>
+<div class="drawer"><a href="https://github.com/getnativelayout/nativelayout/blob/main/SPEC.md">Specification</a><a href="https://github.com/getnativelayout/nativelayout/blob/main/android/README.md">Android guide</a><a href="https://github.com/getnativelayout/nativelayout/tree/main/android/examples/tasks">Examples</a><a href="https://github.com/getnativelayout/nativelayout/releases">Releases</a><a href="https://doi.org/10.5281/zenodo.23470439">Article</a><a href="https://discord.gg/638USuPnpk">Discord</a><a href="https://github.com/getnativelayout/nativelayout">GitHub</a></div>
 </div>
+<div class="sub"><details><summary><svg viewBox="0 0 24 24"><path d="M9 6h12M9 12h12M9 18h12M3.5 6h.01M3.5 12h.01M3.5 18h.01" stroke-width="2.6"/></svg><span>On this page</span><span class="sep">&gt;</span><span id="cur">Install nativelayout</span></summary>
+<div class="list"><a href="#how">How it works</a><a href="#features">Features</a><a href="#styling">Styling</a><a href="#targets">Targets</a><a href="#install">Install on Android</a></div></details></div>
+<div class="banner">nativelayout v1.2.0 is here! Read the <a href="https://github.com/getnativelayout/nativelayout/releases">release notes</a>.</div>
+
+<div class="main" id="top">
+<div class="hero"><div class="crumb"><span>Install</span><span>&#8942;</span></div>
+<h1>nativelayout</h1>
+<p>Write the screen once. Get real native views.</p></div>
+
+<p class="lead">Ready to build native interfaces from a plain text file? No WebView, no canvas: a .nl file written in HTML becomes the buttons, fields and lists of the platform. Choose from the following options to get started.</p>
+
+<div class="cards two">
+<a class="card rec" href="https://github.com/getnativelayout/nativelayout/releases"><h3><svg viewBox="0 0 24 24"><path d="M13 2L4 14h6l-1 8 9-12h-6z"/></svg>Quick start</h3><small>Recommended</small><p>Download the editor APK, write a .nl screen and see the live preview on your phone.</p></a>
+<a class="card" href="#install"><h3><svg viewBox="0 0 24 24"><path d="M4 7h10M18 7h2M4 17h2M10 17h10"/><circle cx="16" cy="7" r="2"/><circle cx="8" cy="17" r="2"/></svg>Custom setup</h3><p>Add the JitPack repository and both artifacts to your own Android project.</p></a>
+<a class="card" href="https://github.com/getnativelayout/nativelayout/blob/main/SPEC.md"><h3><svg viewBox="0 0 24 24"><path d="M6 3h9l4 4v14H6zM14 3v5h5M9 13h7M9 17h7"/></svg>Specification</h3><p>The full language: tags, style, values, the program side and errors.</p></a>
+<a class="card" href="https://github.com/getnativelayout/nativelayout/tree/main/android/examples/tasks"><h3><svg viewBox="0 0 24 24"><path d="M8 7l-5 5 5 5M16 7l5 5-5 5"/></svg>Examples</h3><p>A runnable tasks app with forms, lists, filters and on-device storage.</p></a>
 </div>
 
-<div class="hero">
-<div>
-<p class="tag">.nl files · MPL 2.0 · v0.1.8</p>
-<h1>Write the screen once. Get real native views.</h1>
-<p class="lead">Create native interfaces from HTML, in any language. No WebView, no canvas: a plain text file becomes buttons, fields and lists of the platform.</p>
-<div class="row">
-<a class="btn p" href="https://github.com/getnativelayout/nativelayout">View on GitHub</a>
-<a class="btn s" href="https://github.com/getnativelayout/nativelayout/releases">Try the editor APK</a>
-<a class="btn s" href="https://discord.gg/638USuPnpk">Join the Discord</a>
-</div>
-</div>
-<div class="phonewrap">
-<div class="phone">
-<h3>Tasks</h3>
-<p class="ph-m">2 pending</p>
-<div class="ph-in">New task</div>
-<div class="ph-bt">Add</div>
-<div class="card">Test nativelayout (done)</div>
-<div class="card b">Write the documentation</div>
-<div class="card b">Call Ana</div>
-</div>
-</div>
-</div>
-</div>
-
-<div class="wrap sec">
-<h2>A screen is one text file.</h2>
-<p class="lead">HTML you already know, plus three additions: <span class="v">{value}</span>, <span class="k">if</span> / <span class="k">for</span> lines, and a style with simple selectors. The logic stays in your language, in a screen function.</p>
-<div class="two">
-<pre><span class="c">&lt;!-- tasks.nl --&gt;</span>
-&lt;nativelayout&gt;
+<h2 id="how"><a href="#how">How it works</a></h2>
+<p class="t">A screen is one text file: HTML you already know, plus three additions. <span class="v">{value}</span>, <span class="k">if</span> / <span class="k">for</span> lines, and a style with simple selectors. The logic stays in your language, in a screen function.</p>
+<div class="code"><div class="cap">tasks.nl</div><pre>&lt;nativelayout&gt;
 &lt;link rel="stylesheet" href="tasks.css"&gt;
 
 &lt;body&gt;
@@ -126,10 +161,11 @@ pre{margin:0;background:#161B22;border:1px solid #30363D;border-radius:14px;padd
     &lt;/div&gt;
   <span class="k">end</span>
 &lt;/body&gt;
-&lt;/nativelayout&gt;</pre>
-<pre><span class="c">// Kotlin: one function holds the state and the taps</span>
+&lt;/nativelayout&gt;</pre></div>
+<div class="code"><div class="cap">TasksScreen.kt</div><pre><span class="c">// one function holds the state and the taps</span>
 fun NativeView.TasksScreen(): Page {
-  val s = state { mutableMapOf&lt;String, Any?&gt;("pending" to 2, "tasks" to loadTasks()) }
+  val s = state { mutableMapOf&lt;String, Any?&gt;(
+    "pending" to 2, "tasks" to loadTasks()) }
 
   if (click("add")) {
     addTask(s, value("title"))
@@ -140,32 +176,27 @@ fun NativeView.TasksScreen(): Page {
   }
 
   return view("tasks.nl", s)
-}</pre>
-</div>
-<p class="note">The full, runnable version is the <a href="https://github.com/getnativelayout/nativelayout/tree/main/android/examples/tasks">tasks example</a>: forms, lists, filters, a progress bar and on-device storage.</p>
+}</pre></div>
+
+<h2 id="features"><a href="#features">Features</a></h2>
+<div class="fl">
+<div class="it"><b>Native output</b><span>Buttons, fields, lists and images are real platform views.</span></div>
+<div class="it"><b>HTML you know</b><span>Tags and CSS-like selectors, with variables through var(--name).</span></div>
+<div class="it"><b>Conditions and loops</b><span>if, elif, else and for, right in the file.</span></div>
+<div class="it"><b>Efficient updates</b><span>Each render is diffed and only changes are applied. Typed text is kept.</span></div>
+<div class="it"><b>Long lists</b><span>Give items a key, and mark a container virtual so only the items on screen become views.</span></div>
+<div class="it"><b>Header, footer and icons</b><span>Fixed header and footer, and 30 built-in icons with no image files.</span></div>
+<div class="it"><b>Layers and groups</b><span>Dialogs and bottom sheets with dialog, grouped fields with fieldset and legend.</span></div>
+<div class="it"><b>States and dark theme</b><span>Style :pressed, :disabled and :focus, and switch palettes with prefers-color-scheme.</span></div>
+<div class="it"><b>Clear errors</b><span>Every mistake in a .nl file is reported with its line, in red, on the screen.</span></div>
+<div class="it"><b>Absolute position<em>NEW</em></b><span>position: absolute with top, right, bottom, left and z-index.</span></div>
+<div class="it"><b>Background images<em>NEW</em></b><span>background-image, background-size, background-position and object-fit.</span></div>
+<div class="it"><b>Animations and navigation</b><span>fade and slide animations, plus go, goBack and goRoot between screens.</span></div>
 </div>
 
-<div class="wrap sec">
-<h2>Why nativelayout</h2>
-<div class="grid">
-<div class="f"><i>01</i><h3>Native output</h3><p>Buttons, fields, lists and images are real platform views.</p></div>
-<div class="f"><i>02</i><h3>HTML you know</h3><p>Tags and CSS-like selectors, with variables through var(--name).</p></div>
-<div class="f"><i>03</i><h3>Conditions and loops</h3><p>More than a static canvas: if, elif, else and for, right in the file.</p></div>
-<div class="f"><i>04</i><h3>Efficient updates</h3><p>Each render is diffed and only changes are applied. Typed text is kept.</p></div>
-<div class="f"><i>05</i><h3>Long lists</h3><p>Give items a key, and mark a container virtual so only the items on screen become views.</p></div>
-<div class="f"><i>06</i><h3>Header and icons</h3><p>A fixed header that stays while the screen scrolls, and 30 built-in icons with no image files.</p></div>
-<div class="f"><i>07</i><h3>Layers and groups</h3><p>Dialogs and bottom sheets with dialog, grouped fields with fieldset and legend.</p></div>
-<div class="f"><i>08</i><h3>States and dark theme</h3><p>Style :pressed, :disabled and :focus, and switch palettes with prefers-color-scheme.</p></div>
-<div class="f"><i>09</i><h3>Clear errors</h3><p>Every mistake in a .nl file is reported with its line, in red, on the screen.</p></div>
-</div>
-</div>
-
-<div class="wrap sec">
-<h2>Style it like CSS.</h2>
-<p class="lead">Variables, pressed states, gradients, shadows and a dark theme, in a plain .css file linked from the screen.</p>
-<div class="two">
-<pre><span class="c">/* tasks.css */</span>
-:root { --bg: #F2F2F2; --card: #EDE9FE; --accent: #2F81F7; }
+<h2 id="styling"><a href="#styling">Styling</a></h2>
+<p class="t">Style it like CSS: variables, pressed states, gradients, shadows and a dark theme, in a plain .css file linked from the screen.</p>
+<div class="code"><div class="cap">tasks.css</div><pre>:root { --bg: #F2F2F2; --card: #EDE9FE; --accent: #2F81F7; }
 
 <span class="c">/* dark theme */</span>
 @media (prefers-color-scheme: dark) {
@@ -173,11 +204,11 @@ fun NativeView.TasksScreen(): Page {
 }
 
 body  { background: var(--bg); padding: 1.25rem; gap: 1rem; }
-.card { background: var(--card); border-radius: 0.75rem; padding: 0.875rem;
-        box-shadow: 0 2px 4px #0003; }
+.card { background: var(--card); border-radius: 0.75rem;
+        padding: 0.875rem; box-shadow: 0 2px 4px #0003; }
 #add  { background: var(--accent); color: #FFFFFF; font-weight: bold; }
-#add:pressed { background: #1F6FE0; }</pre>
-<pre><span class="c">&lt;!-- a long list: only items on screen become views --&gt;</span>
+#add:pressed { background: #1F6FE0; }</pre></div>
+<div class="code"><div class="cap">products.nl</div><pre><span class="c">&lt;!-- only items on screen become views --&gt;</span>
 &lt;div virtual style="gap: 0.5rem"&gt;
   <span class="k">for p in products:</span>
     &lt;div class="item" key="<span class="v">{p.id}</span>"&gt;
@@ -185,74 +216,72 @@ body  { background: var(--bg); padding: 1.25rem; gap: 1rem; }
       &lt;p class="price"&gt;<span class="v">{p.price}</span>&lt;/p&gt;
     &lt;/div&gt;
   <span class="k">end</span>
-&lt;/div&gt;</pre>
-</div>
-</div>
+&lt;/div&gt;</pre></div>
 
-<div class="wrap sec">
-<h2>One file, any language.</h2>
-<p class="lead">Each language supplies an Expander, an Engine and a native host. The .nl file stays the same.</p>
-<div class="chips">
-<span class="chip on">Kotlin · Android</span>
-<span class="chip">Java · Android</span>
-<span class="chip">Python · Kivy</span>
-<span class="chip">Python · Tkinter</span>
-<span class="chip">Swift · iOS</span>
-<span class="chip">React Native</span>
-<span class="chip">Flutter</span>
-<span class="chip">.NET MAUI</span>
-<span class="chip">Qt</span>
-<span class="chip">Rust</span>
-<span class="chip">Go</span>
+<h2 id="targets"><a href="#targets">Targets</a></h2>
+<p class="t">One file, any language. Each language supplies an Expander, an Engine and a native host. The .nl file stays the same.</p>
+<div class="tg">
+<div class="r"><span>Language</span><span>Target</span><span>Status</span></div>
+<div class="r"><span>Kotlin</span><span>Android</span><span class="st ok">implemented</span></div>
+<div class="r"><span>Python</span><span>Kivy</span><span class="st wip">in progress</span></div>
+<div class="r"><span>Python</span><span>Tkinter</span><span class="st wip">in progress</span></div>
+<div class="r"><span>Java</span><span>Android</span><span class="st pl">planned</span></div>
+<div class="r"><span>Swift</span><span>iOS</span><span class="st pl">planned</span></div>
+<div class="r"><span>JS / TS</span><span>React Native</span><span class="st pl">planned</span></div>
+<div class="r"><span>Dart</span><span>Flutter</span><span class="st pl">planned</span></div>
+<div class="r"><span>C#</span><span>.NET MAUI</span><span class="st pl">planned</span></div>
+<div class="r"><span>C++ / Rust / Go</span><span>Qt, desktop</span><span class="st pl">planned</span></div>
 </div>
-<p class="note">Kotlin for Android is implemented today. The other targets are planned. Want to add a language? See the <a href="https://github.com/getnativelayout/nativelayout/blob/main/CONTRIBUTING.md">contributing guide</a>.</p>
-</div>
+<p class="note">Python lives in the <a href="https://github.com/getnativelayout/nativelayout/tree/main/python">python/</a> folder. Want to add a language? See the <a href="https://github.com/getnativelayout/nativelayout/blob/main/CONTRIBUTING.md">contributing guide</a>.</p>
 
-<div class="wrap sec">
-<h2>Install on Android</h2>
-<p class="lead">Published through JitPack. Add both artifacts with the same version. Minimum SDK 21.</p>
-<div class="two">
-<pre><span class="c">// settings.gradle.kts</span>
-dependencyResolutionManagement {
+<h2 id="install"><a href="#install">Install on Android</a></h2>
+<p class="t">Published through JitPack. Add both artifacts with the same version. Minimum SDK 21.</p>
+<div class="code"><div class="cap">settings.gradle.kts</div><pre>dependencyResolutionManagement {
   repositories {
     google()
     mavenCentral()
     maven("https://jitpack.io")
   }
-}</pre>
-<pre><span class="c">// app/build.gradle.kts</span>
-dependencies {
-  implementation("com.github.getnativelayout.nativelayout:nativelayout-android:v0.1.8")
-  implementation("com.github.getnativelayout.nativelayout:nativelayout-core:v0.1.8")
-}</pre>
-</div>
-<p class="note">To try a screen without creating a project, download <b>nativelayout-debug.apk</b> from <a href="https://github.com/getnativelayout/nativelayout/releases">Releases</a>. It is an editor with code, data, a live preview and a file tree.</p>
+}</pre></div>
+<div class="code"><div class="cap">app/build.gradle.kts</div><pre>dependencies {
+  implementation("com.github.getnativelayout.nativelayout:nativelayout-android:v1.2.0")
+  implementation("com.github.getnativelayout.nativelayout:nativelayout-core:v1.2.0")
+}</pre></div>
+<p class="note">To try a screen without creating a project, download <b>nativelayout-debug.apk</b> from <a href="https://github.com/getnativelayout/nativelayout/releases">Releases</a>. It is an editor with code, data, a live preview and a file tree. An online editor is planned.</p>
+
+<h2 id="article"><a href="#article">Read the article</a></h2>
+<p class="t">The motivation, the proposal and the first results on long lists are described in the technical article: Rafael, A. C. (2026). <i>Describing Native Android Interfaces with HTML and CSS: A Proposal for Simplification.</i> Zenodo. <a class="link" href="https://doi.org/10.5281/zenodo.23470439">doi.org/10.5281/zenodo.23470439</a></p>
+
+<div class="help"><p>Was this page's content helpful?</p><div class="row"><a href="https://discord.gg/638USuPnpk">Yes</a><a href="https://github.com/getnativelayout/nativelayout/issues">No</a></div></div>
+<p class="src">Unless stated otherwise, the documentation on this site reflects nativelayout 1.2.0. <a href="https://github.com/getnativelayout/nativelayout">View source</a> or <a href="https://github.com/getnativelayout/nativelayout/issues">report an issue</a>.</p>
 </div>
 
-<div class="wrap sec">
-<h2>Read the article.</h2>
-<p class="lead">The motivation, the proposal and the first results on long lists are described in the technical article.</p>
-<div class="quote">Rafael, A. C. (2026). <i>Describing Native Android Interfaces with HTML and CSS: A Proposal for Simplification.</i> Zenodo. <a href="https://doi.org/10.5281/zenodo.23470439">doi.org/10.5281/zenodo.23470439</a></div>
+<div class="foot">
+<div class="brand"><svg width="56" height="56" viewBox="0 0 32 32"><rect width="32" height="32" rx="8" fill="#0B63CE"/><path d="M9 22V10l6 8V10M19 10v12h5" fill="none" stroke="#fff" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg><span>nativelayout</span></div>
+<div class="soc">
+<a href="https://github.com/getnativelayout/nativelayout" aria-label="GitHub"><svg viewBox="0 0 16 16"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/></svg></a>
+<a href="https://discord.gg/638USuPnpk" aria-label="Discord"><svg class="s" viewBox="0 0 24 24"><path d="M5 5h14a2 2 0 012 2v8a2 2 0 01-2 2h-7l-5 4v-4H5a2 2 0 01-2-2V7a2 2 0 012-2z"/><path d="M8 10h.01M12 10h.01M16 10h.01" stroke-width="2.4"/></svg></a>
+<a href="https://doi.org/10.5281/zenodo.23470439" aria-label="Article"><svg class="s" viewBox="0 0 24 24"><path d="M5 4h10a3 3 0 013 3v13H8a3 3 0 01-3-3zM5 17a3 3 0 013-3h10"/></svg></a>
 </div>
-
-<div class="wrap sec cta">
-<h2>Build your first screen.</h2>
-<p class="lead" style="margin: 0 auto 28px">Open source. Code under MPL 2.0, specification under CC BY-SA 4.0. Ask questions and show what you built.</p>
-<div class="row">
-<a class="btn p" href="https://github.com/getnativelayout/nativelayout">Star on GitHub</a>
-<a class="btn s" href="https://discord.gg/638USuPnpk">Join the Discord</a>
-</div>
-</div>
-
-<div class="wrap">
-<div class="foot"><span>nativelayout · code MPL 2.0 · specification CC BY-SA 4.0</span><span>Create native interfaces from HTML, in any language.</span></div>
+<hr>
+<p>Except as otherwise noted, this site is licensed under the Mozilla Public License 2.0, and the specification under the Creative Commons Attribution-ShareAlike 4.0 International License.</p>
+<div class="fl2"><a href="https://github.com/getnativelayout/nativelayout/blob/main/SPEC.md">Specification</a><a href="https://github.com/getnativelayout/nativelayout/blob/main/CONTRIBUTING.md">Contributing</a><a href="https://github.com/getnativelayout/nativelayout/releases">Releases</a><a href="https://github.com/getnativelayout/nativelayout/blob/main/LICENSE">License</a></div>
+<div class="built">Built with <b>.nl</b></div>
 </div>
 </div>
 </x-dc>
-<script type="text/x-dc" data-dc-script data-props='{"accent":{"editor":"color","default":"#1F6FEB"},"$preview":{"width":1280,"height":3400}}'>
+<script type="text/x-dc" data-dc-script data-props='{"accent":{"editor":"color","default":"#0B63CE"},"$preview":{"width":1280,"height":3400}}'>
 class Component extends DCLogic {
+componentDidMount() {
+const cur = document.getElementById('cur');
+const map = {top:'Install nativelayout', how:'How it works', features:'Features', styling:'Styling', targets:'Targets', install:'Install on Android', article:'Read the article'};
+if (!cur || !('IntersectionObserver' in window)) return;
+const io = new IntersectionObserver((es) => { es.forEach((e) => { if (e.isIntersecting && map[e.target.id]) cur.textContent = map[e.target.id]; }); }, {rootMargin:'-140px 0px -70% 0px'});
+Object.keys(map).forEach((id) => { const el = document.getElementById(id); if (el) io.observe(el); });
+document.querySelectorAll('.sub .list a').forEach((a) => a.addEventListener('click', () => { const d = document.querySelector('.sub details'); if (d) d.removeAttribute('open'); }));
+}
 renderVals() {
-return { accent: this.props.accent ?? '#1F6FEB' };
+return { accent: this.props.accent ?? '#0B63CE' };
 }
 }
 </script>
