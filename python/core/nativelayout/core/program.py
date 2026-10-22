@@ -1,4 +1,12 @@
+"""Program side: the verbs of the spec (section 8) on top of the engine.
 
+The part of `NativeView` that does not depend on the platform. Each host (Kivy/android, Kivy/desktop)
+provides the `LayoutHost`, the `loader` and the dark theme.
+
+Two styles, as in the spec:
+  - screen functions: `def panel(): s = state({...}); if click("add"): ...; return view("panel.nl", s)`
+  - base layer:       `while await ui.render(screen, data): ...`
+"""
 from __future__ import annotations
 
 import asyncio
@@ -15,7 +23,7 @@ MAX_HOPS = 8
 
 
 class Page:
-    """O que uma funcao de ecra devolve: `view(...)`, `go(...)` ou `go_back()`."""
+    """What a screen function returns: `view(...)`, `go(...)` or `go_back()`."""
 
 
 class ViewPage(Page):
@@ -66,10 +74,10 @@ class NativeViewBase:
         self._history: list[Callable[[], Page]] = []
         self._back_handled = False
         self._last_shown: ViewPage | None = None
-        # chamado quando o botao voltar e premido no primeiro ecra e o programa nao o tratou
+        # called when the back button is pressed on the first screen and the program did not handle it
         self.on_exit: Callable[[], None] | None = None
 
-    # ---- camada base
+    # ---- base layer
     def screen(self, name: str) -> Screen:
         source = self._loader(name)
         if source is None:
@@ -95,7 +103,7 @@ class NativeViewBase:
                 self._session.warnings.append(w)
         return await self._session.commit(prepared)
 
-    # ---- funcoes de ecra
+    # ---- screen functions
     def state(self, initial):
         i = self._slot_index
         self._slot_index += 1
@@ -132,7 +140,7 @@ class NativeViewBase:
             self._host.post_back()
 
     async def run(self) -> None:
-        """Corre o programa ate a janela fechar. Um erro e mostrado no lugar do ecra."""
+        """Runs the program until the window closes. An error is shown in place of the screen."""
         try:
             if self._app is not None:
                 await self._run_app(self._app)
@@ -164,7 +172,7 @@ class NativeViewBase:
                 elif self.on_exit is not None:
                     self.on_exit()
             if isinstance(page, BackPage) and not self._history:
-                # nada a que voltar: o ecra fica como esta
+                # nothing to go back to: the screen stays as it is
                 if self.on_exit is not None:
                     self.on_exit()
                 if self._last_shown is None:
@@ -201,7 +209,7 @@ class NativeViewBase:
             else:
                 raise TypeError("a screen function must return view(...), go(...) or go_back()")
 
-    # ---- toques e campos (depois de um salto ainda nao ha toque: respondem "nada")
+    # ---- taps and fields (after a jump there is no tap yet: they answer "nothing")
     def click(self, target: str) -> bool:
         return (not self._fresh) and self._session.click(target)
 
@@ -224,7 +232,7 @@ class NativeViewBase:
         return r if r is not None else False
 
     def set_value(self, id: str, *args) -> None:
-        """`set_value(id, text)` ou `set_value(id, item..., text)`: o ultimo argumento e o texto."""
+        """`set_value(id, text)` or `set_value(id, item..., text)`: the last argument is the text."""
         if not args or not isinstance(args[-1], str):
             raise TypeError("set_value(id, item..., text): the last argument must be the text")
         self._session.set_value(id, args[-1], list(args[:-1]))
@@ -254,7 +262,7 @@ class NativeViewBase:
         return False
 
 
-# ---- verbos livres, ligados ao NativeView que esta a chamar a funcao de ecra
+# ---- free verbs, bound to the NativeView that is calling the screen function
 def _ui() -> NativeViewBase:
     ui = _current.get()
     if ui is None:
