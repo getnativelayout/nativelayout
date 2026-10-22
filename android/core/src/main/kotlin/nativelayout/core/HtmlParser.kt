@@ -59,21 +59,21 @@ class ChunkCache {
     private val map = HashMap<String, Chunk>()
     private var variables: Map<String, String>? = null
 
-    @Synchronized fun useFor(vars: Map<String, String>) {
+    fun useFor(vars: Map<String, String>) {
         if (variables != vars) {
             map.clear()
             variables = vars
         }
     }
 
-    @Synchronized fun get(key: String): Chunk? = map[key]
+    fun get(key: String): Chunk? = map[key]
 
-    @Synchronized fun put(key: String, chunk: Chunk) {
+    fun put(key: String, chunk: Chunk) {
         if (map.size >= 20000) map.clear()
         map[key] = chunk
     }
 
-    @Synchronized fun clear() = map.clear()
+    fun clear() = map.clear()
 }
 
 class HtmlText(val text: String, override val line: Int) : HtmlNode()
@@ -255,11 +255,11 @@ class HtmlParser(
                         name.startsWith("#x") || name.startsWith("#X") ->
                             name.substring(2).toIntOrNull(16)
                                 ?.takeIf { Character.isValidCodePoint(it) }
-                                ?.let { String(Character.toChars(it)) }
+                                ?.let { Character.toChars(it).concatToString() }
                         name.startsWith("#") ->
                             name.substring(1).toIntOrNull()
                                 ?.takeIf { Character.isValidCodePoint(it) }
-                                ?.let { String(Character.toChars(it)) }
+                                ?.let { Character.toChars(it).concatToString() }
                         else -> null
                     }
                     if (r != null) { sb.append(r); k = end + 1; continue }
