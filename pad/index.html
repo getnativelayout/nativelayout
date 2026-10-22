@@ -1,0 +1,256 @@
+<!doctype html>
+<!--
+  Author: Adilson C. Rafael (adilson889)
+  Date: 2026-10-22
+
+  This Source Code Form is subject to the terms of the Mozilla Public
+  License, v. 2.0. If a copy of the MPL was not distributed with this
+  file, You can obtain one at https://mozilla.org/MPL/2.0/.
+-->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="description" content="NativeLayoutPad: write a .nl screen and see it live in your browser.">
+<title>NativeLayoutPad</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect x='6' y='6' width='88' height='88' rx='26' fill='%23DFE4EB'/%3E%3Cpath fill='%2344546A' d='M33 70V40h7v3c1.6-2.2 4.8-3.4 8-3.4 7 0 11.5 4.2 11.5 11.2V70h-7V52c0-3.500-2-5.800-5.200-5.800-4.400 0-7.300 2.500-7.300 6.800V70z'/%3E%3Crect x='64' y='28' width='7' height='42' fill='%230C8F65'/%3E%3C/svg%3E">
+<style>
+*{box-sizing:border-box}
+html,body{height:100%;margin:0}
+body{background:#0D1117;color:#C9D1D9;font-family:system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;font-size:15px;display:flex;flex-direction:column;overflow:hidden}
+button,select{font:inherit;color:inherit}
+.bar{display:flex;align-items:center;gap:10px;padding:8px 12px;background:#161B22;border-bottom:1px solid #30363D;flex-wrap:wrap}
+.brand{display:flex;align-items:center;gap:8px;font-weight:700;font-size:17px;color:#E6EDF3;margin-right:auto}
+.brand b{color:#3FB950}
+.brand a{display:flex}
+.btn{background:#21262D;border:1px solid #30363D;border-radius:8px;padding:7px 12px;cursor:pointer;min-height:36px}
+.btn:hover{border-color:#8B949E}
+.btn.on{background:#1F6FEB;border-color:#1F6FEB;color:#fff}
+.btn.go{background:#238636;border-color:#2EA043;color:#fff;font-weight:600}
+select.btn{padding-right:6px}
+.main{flex:1;min-height:0;display:flex}
+.pane{display:flex;flex-direction:column;min-width:0;min-height:0}
+.ed{flex:1.1;border-right:1px solid #30363D}
+.pv{flex:1;background:#0A0E13;align-items:center}
+.tabs{display:flex;align-items:flex-end;background:#161B22;border-bottom:1px solid #30363D;overflow-x:auto;flex:none}
+.tab{display:flex;align-items:center;gap:6px;padding:9px 14px;color:#8B949E;cursor:pointer;white-space:nowrap;border-bottom:2px solid transparent;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:13.5px}
+.tab.on{color:#E6EDF3;border-bottom-color:#3FB950;background:#0D1117}
+.tab i{font-style:normal;color:#8B949E;padding:0 2px}
+.tab i:hover{color:#F85149}
+.tab.add{color:#3FB950}
+.code{position:relative;flex:1;min-height:0;display:flex;background:#0D1117}
+.gut{flex:none;overflow:hidden;padding:12px 8px 12px 10px;text-align:right;color:#6E7681;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:13.5px;line-height:20px;user-select:none;background:#0D1117;border-right:1px solid #21262D}
+.gut div.err{color:#fff;background:#DA3633;border-radius:3px}
+.gut div.warn{color:#0D1117;background:#D29922;border-radius:3px}
+textarea{flex:1;min-width:0;border:0;outline:0;resize:none;background:#0D1117;color:#C9D1D9;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:13.5px;line-height:20px;padding:12px;white-space:pre;overflow:auto;tab-size:4}
+.probs{flex:none;max-height:32%;overflow:auto;background:#161B22;border-top:1px solid #30363D;font-size:13.5px}
+.probs .h{padding:6px 12px;color:#8B949E;font-size:12.5px;text-transform:uppercase;letter-spacing:.06em;position:sticky;top:0;background:#161B22}
+.pr{display:flex;gap:10px;padding:7px 12px;cursor:pointer;border-top:1px solid #21262D}
+.pr:hover{background:#1C2128}
+.pr b{flex:none;font-family:ui-monospace,Menlo,Consolas,monospace;font-weight:600;color:#F85149}
+.pr.w b{color:#D29922}
+.pr small{display:block;color:#8B949E;margin-top:2px;font-family:ui-monospace,Menlo,Consolas,monospace;white-space:pre-wrap}
+.ok{padding:8px 12px;color:#3FB950}
+.pvh{display:flex;align-items:center;justify-content:space-between;width:100%;padding:8px 12px;color:#8B949E;font-size:13px;flex:none}
+.stage{flex:1;min-height:0;width:100%;display:flex;align-items:center;justify-content:center;padding:12px}
+.phone{height:100%;max-height:720px;aspect-ratio:9/17;max-width:100%;border:8px solid #2A313C;border-radius:30px;background:#fff;overflow:hidden;box-shadow:0 20px 60px -20px rgba(31,111,235,.4)}
+.phone iframe{width:100%;height:100%;border:0;background:#fff;display:block}
+.eng{color:#D29922}
+.mtabs{display:none}
+@media(max-width:820px){
+  .main{flex-direction:column}
+  .ed,.pv{flex:1;border:0}
+  .mtabs{display:flex}
+  body[data-v=code] .pv{display:none}
+  body[data-v=view] .ed{display:none}
+  .phone{max-height:none}
+}
+</style>
+</head>
+<body data-v="code">
+<div class="bar">
+  <div class="brand"><a href="../" title="nativelayout"><svg width="30" height="30" viewBox="3 3 94 94"><defs><filter id="sh" x="-30%" y="-30%" width="160%" height="160%"><feDropShadow dx="-3" dy="-3" stdDeviation="3" flood-color="#ffffff" flood-opacity=".9"/><feDropShadow dx="4" dy="5" stdDeviation="4" flood-color="#000" flood-opacity=".5"/></filter></defs><rect x="10" y="10" width="80" height="80" rx="24" fill="#DFE4EB" filter="url(#sh)"/><g transform="translate(50 50) scale(1.55) translate(-51 -49.8)"><path fill="#44546A" d="M35 66.7V42.2h6.2v2.4c1.4-1.9 4.3-3 7.1-3 6.2 0 10.2 3.7 10.2 9.9v15.2h-6.2V52.5c0-3.1-1.8-5.1-4.6-5.1-3.9 0-6.5 2.2-6.5 6V66.7z"/><rect x="61.8" y="32.9" width="6.1" height="33.8" fill="#0C8F65"/></g></svg></a><span>native<b>layout</b>Pad</span></div>
+  <select id="ex" class="btn" aria-label="Examples"></select>
+  <button id="dark" class="btn" title="Preview with the dark theme">Dark</button>
+  <button id="share" class="btn">Share</button>
+  <button id="run" class="btn go">Run</button>
+</div>
+<div class="tabs mtabs" id="mt"><div class="tab on" data-v="code">Code</div><div class="tab" data-v="view">Preview</div></div>
+<div class="main">
+  <div class="pane ed">
+    <div class="tabs" id="tabs"></div>
+    <div class="code"><div class="gut" id="gut"></div><textarea id="ta" spellcheck="false" autocapitalize="off" autocomplete="off" autocorrect="off"></textarea></div>
+    <div class="probs" id="probs"></div>
+  </div>
+  <div class="pane pv">
+    <div class="pvh"><span>Preview (approximate, the real result is native views)</span><span id="eng" class="eng"></span></div>
+    <div class="stage"><div class="phone"><iframe id="fr" title="Preview" sandbox=""></iframe></div></div>
+  </div>
+</div>
+<script src="nlweb.js"></script>
+<script>
+(function () {
+  var EXAMPLES = {"Tasks": {"screen.nl": "<nativelayout>\n\n<link rel=\"stylesheet\" href=\"theme.css\">\n\n<body>\n    <div class=\"head\">\n        <h1>Tasks<\/h1>\n        <p class=\"sub\">{pending} pending, {done} done<\/p>\n    <\/div>\n\n    <div class=\"track\">\n        <div class=\"fill\" style=\"width: {percent}%\"><\/div>\n    <\/div>\n\n    <div class=\"row\">\n        <input id=\"title\" placeholder=\"What needs doing?\">\n        <button id=\"add\">Add<\/button>\n    <\/div>\n\n    <div class=\"filters\">\n        if filter == \"all\":\n            <button id=\"show-all\" class=\"chip-on\">All {total}<\/button>\n        else:\n            <button id=\"show-all\" class=\"chip\">All {total}<\/button>\n        end\n        if filter == \"pending\":\n            <button id=\"show-pending\" class=\"chip-on\">Pending {pending}<\/button>\n        else:\n            <button id=\"show-pending\" class=\"chip\">Pending {pending}<\/button>\n        end\n        if filter == \"done\":\n            <button id=\"show-done\" class=\"chip-on\">Done {done}<\/button>\n        else:\n            <button id=\"show-done\" class=\"chip\">Done {done}<\/button>\n        end\n    <\/div>\n\n    if shown.size == 0:\n        <div class=\"center\">\n            <p class=\"muted\">{empty}<\/p>\n        <\/div>\n    else:\n        for task in shown:\n            <div class=\"card\">\n                if task.done:\n                    <div class=\"box-on\"><\/div>\n                    <p class=\"t-done\">{task.title}<\/p>\n                else:\n                    <div class=\"box\"><\/div>\n                    <p class=\"t\">{task.title}<\/p>\n                end\n                <button class=\"remove\">Remove<\/button>\n            <\/div>\n        end\n    end\n\n    if done > 0:\n        <button id=\"clear\" class=\"ghost\">Clear completed<\/button>\n    end\n<\/body>\n\n<\/nativelayout>", "theme.css": ":root {\n        --bg: #F4F5F7;\n        --card: #FFFFFF;\n        --line: #E5E7EB;\n        --text: #111827;\n        --muted: #6B7280;\n        --accent: #4F46E5;\n        --accent-soft: #E0E7FF;\n        --danger: #DC2626;\n    }\n\n    @media (prefers-color-scheme: dark) {\n        :root {\n            --bg: #0F172A;\n            --card: #1E293B;\n            --line: #334155;\n            --text: #F1F5F9;\n            --muted: #94A3B8;\n            --accent-soft: #312E81;\n        }\n    }\n\n    body    { background: var(--bg); color: var(--text); padding: 1.25rem; gap: 1rem; }\n    p       { margin: 0; }\n    h1      { margin: 0; font-size: 1.75rem; font-weight: bold; }\n    .head   { gap: 0.25rem; }\n    .sub    { color: var(--muted); }\n    .muted  { color: var(--muted); }\n\n    .track  { background: var(--line); border-radius: 0.5rem; height: 0.5rem; }\n    .fill   { background: linear-gradient(90deg, #818CF8, #4F46E5); border-radius: 0.5rem; height: 0.5rem; }\n\n    .row    { flex-direction: row; align-items: center; gap: 0.5rem; }\n    #title  { flex: 1; color: var(--text); background: var(--card); border: 1px solid var(--line); border-radius: 0.75rem; padding: 0.875rem; }\n    #add    { background: var(--accent); color: #FFFFFF; font-weight: bold; border-radius: 0.75rem; padding: 0.875rem; }\n    #add:pressed { background: #4338CA; }\n\n    .filters { flex-direction: row; gap: 0.5rem; }\n    .chip    { background: var(--card); color: var(--muted); border: 1px solid var(--line); border-radius: 1rem; padding: 0.625rem; }\n    .chip:pressed { background: var(--accent-soft); }\n    .chip-on { background: var(--accent); color: #FFFFFF; font-weight: bold; border: 1px solid var(--accent); border-radius: 1rem; padding: 0.625rem; }\n\n    .card   { flex-direction: row; align-items: center; gap: 0.75rem; background: var(--card); border: 1px solid var(--line); border-radius: 1rem; padding: 0.875rem; box-shadow: 0 2px 4px rgba(0, 0, 0, 0.12); }\n    .card:pressed { background: var(--accent-soft); }\n    .box    { width: 1.5rem; height: 1.5rem; border: 2px solid var(--accent); border-radius: 0.5rem; }\n    .box-on { width: 1.5rem; height: 1.5rem; background: var(--accent); border: 2px solid var(--accent); border-radius: 0.5rem; }\n    .t      { flex: 1; font-size: 1rem; }\n    .t-done { flex: 1; font-size: 1rem; color: var(--muted); text-decoration: line-through; }\n    .remove { background: transparent; color: var(--danger); font-size: 0.875rem; padding: 0.5rem; }\n    .remove:pressed { background: #FEE2E2; }\n\n    .center { align-items: center; padding: 2rem; }\n    .ghost  { background: var(--accent-soft); color: var(--accent); font-weight: bold; border-radius: 0.75rem; padding: 0.875rem; }\n    .ghost:pressed { background: #C7D2FE; }\n", "data.json": "{\n  \"pending\": 2,\n  \"done\": 1,\n  \"total\": 3,\n  \"percent\": 33,\n  \"filter\": \"all\",\n  \"empty\": \"Nothing to do.\",\n  \"shown\": [\n    {\n      \"title\": \"Test nativelayout\",\n      \"done\": true\n    },\n    {\n      \"title\": \"Write the documentation\",\n      \"done\": false\n    },\n    {\n      \"title\": \"Call Ana\",\n      \"done\": false\n    }\n  ]\n}"}, "Hello": {"screen.nl": "<nativelayout>\n<link rel=\"stylesheet\" href=\"theme.css\">\n\n<body>\n    <h1>Hello, {name}<\/h1>\n\n    if items.size == 0:\n        <p class=\"muted\">Nothing yet.<\/p>\n    else:\n        for item in items:\n            <div class=\"card\">\n                <p>{item}<\/p>\n            <\/div>\n        end\n    end\n\n    <button id=\"go\">Say hi<\/button>\n<\/body>\n<\/nativelayout>\n", "theme.css": ":root { --bg: #F2F2F2; --card: #FFFFFF; --accent: #2F81F7; }\n\n@media (prefers-color-scheme: dark) {\n    :root { --bg: #0D1117; --card: #161B22; }\n}\n\nbody  { background: var(--bg); padding: 1.25rem; gap: 0.75rem; }\nh1    { margin: 0; font-size: 1.75rem; font-weight: bold; }\n.muted { color: #6B7280; }\n.card { background: var(--card); border-radius: 0.75rem; padding: 0.875rem; box-shadow: 0 2px 4px #0003; }\n#go   { background: var(--accent); color: #FFFFFF; font-weight: bold; border-radius: 0.75rem; padding: 0.875rem; }\n#go:pressed { background: #1F6FE0; }\n", "data.json": "{\n  \"name\": \"world\",\n  \"items\": [\n    \"First\",\n    \"Second\",\n    \"Third\"\n  ]\n}"}, "Absolute": {"screen.nl": "<nativelayout>\n<link rel=\"stylesheet\" href=\"theme.css\">\n\n<body>\n    <h1>Inbox<\/h1>\n\n    <div class=\"tile\">\n        <p>Messages<\/p>\n        <p class=\"badge\">{count}<\/p>\n    <\/div>\n<\/body>\n<\/nativelayout>\n", "theme.css": "body  { background: #0D1117; color: #C9D1D9; padding: 1.25rem; gap: 1rem; }\nh1    { margin: 0; font-size: 1.75rem; font-weight: bold; }\n.tile { background: #161B22; border: 1px solid #30363D; border-radius: 0.75rem; padding: 1.5rem; }\n.badge {\n    position: absolute; top: 0.5rem; right: 0.5rem; z-index: 2;\n    background: #F85149; color: #FFFFFF; font-weight: bold;\n    border-radius: 1rem; padding: 0.25rem;\n}\n", "data.json": "{\n  \"count\": 3\n}"}};
+  var MAIN = 'screen.nl', FIXED = ['screen.nl', 'theme.css', 'data.json'];
+  var $ = function (id) { return document.getElementById(id); };
+  var ta = $('ta'), gut = $('gut'), tabs = $('tabs'), probs = $('probs'), fr = $('fr');
+  var st = { files: {}, cur: MAIN, dark: false, problems: [] };
+  var timer = null;
+
+  function store(k, v) { try { if (v === undefined) return localStorage.getItem(k); localStorage.setItem(k, v); } catch (e) {} return null; }
+  function clone(o) { return JSON.parse(JSON.stringify(o)); }
+
+  // ---------- state ----------
+  function load() {
+    var h = location.hash.slice(1), f = null;
+    if (h.indexOf('s=') === 0) {
+      try { f = JSON.parse(decodeURIComponent(escape(atob(h.slice(2))))); } catch (e) { f = null; }
+    }
+    if (!f) { try { f = JSON.parse(store('nlpad.files')); } catch (e) { f = null; } }
+    st.files = (f && f[MAIN] !== undefined) ? f : clone(EXAMPLES.Tasks);
+    st.dark = store('nlpad.dark') === '1';
+    $('dark').classList.toggle('on', st.dark);
+  }
+  function save() { store('nlpad.files', JSON.stringify(st.files)); }
+
+  // ---------- tabs and editor ----------
+  function drawTabs() {
+    tabs.innerHTML = '';
+    Object.keys(st.files).forEach(function (n) {
+      var t = document.createElement('div');
+      t.className = 'tab' + (n === st.cur ? ' on' : '');
+      t.textContent = n;
+      t.onclick = function () { st.cur = n; drawTabs(); show(); };
+      if (FIXED.indexOf(n) < 0) {
+        var x = document.createElement('i'); x.textContent = 'x';
+        x.onclick = function (e) { e.stopPropagation(); if (confirm('Delete ' + n + '?')) { delete st.files[n]; st.cur = MAIN; drawTabs(); show(); save(); run(); } };
+        t.appendChild(x);
+      }
+      tabs.appendChild(t);
+    });
+    var a = document.createElement('div');
+    a.className = 'tab add'; a.textContent = '+ file';
+    a.onclick = function () {
+      var n = (prompt('File name (for example card.nl or extra.css)') || '').trim();
+      if (!n) return;
+      if (!/^[\w.\-\/]+\.(nl|css)$/i.test(n)) { alert('Use a name that ends in .nl or .css'); return; }
+      if (st.files[n] === undefined) st.files[n] = /\.nl$/i.test(n) ? '<nativelayout>\n<body>\n    <p>New component</p>\n</body>\n</nativelayout>\n' : '';
+      st.cur = n; drawTabs(); show(); save();
+    };
+    tabs.appendChild(a);
+  }
+  function show() { ta.value = st.files[st.cur] || ''; gutter(); }
+  function gutter() {
+    var n = ta.value.split('\n').length, m = {};
+    st.problems.forEach(function (p) { if (p.file === st.cur) m[p.line] = Math.min(m[p.line] || 9, p.w ? 1 : 0) ; });
+    var s = '';
+    for (var i = 1; i <= n; i++) {
+      var c = m[i] === 0 ? ' class="err"' : (m[i] === 1 ? ' class="warn"' : '');
+      s += '<div' + c + '>' + i + '</div>';
+    }
+    gut.innerHTML = s;
+    gut.scrollTop = ta.scrollTop;
+  }
+  ta.addEventListener('input', function () {
+    st.files[st.cur] = ta.value; gutter(); save();
+    clearTimeout(timer); timer = setTimeout(run, 350);
+  });
+  ta.addEventListener('scroll', function () { gut.scrollTop = ta.scrollTop; });
+  ta.addEventListener('keydown', function (e) {
+    if (e.key === 'Tab') {
+      e.preventDefault();
+      var s = ta.selectionStart, en = ta.selectionEnd;
+      ta.value = ta.value.slice(0, s) + '    ' + ta.value.slice(en);
+      ta.selectionStart = ta.selectionEnd = s + 4;
+      ta.dispatchEvent(new Event('input'));
+    }
+  });
+  function goLine(n) {
+    var lines = ta.value.split('\n'), pos = 0;
+    for (var i = 0; i < n - 1 && i < lines.length; i++) pos += lines[i].length + 1;
+    ta.focus(); ta.setSelectionRange(pos, pos + (lines[n - 1] || '').length);
+    ta.scrollTop = Math.max(0, (n - 4) * 20);
+  }
+
+  // ---------- run ----------
+  var BASE = 'html,body{margin:0}*{box-sizing:border-box}' +
+    'body{font-family:system-ui,sans-serif;font-size:16px;color:#111}' +
+    'div,header,footer,fieldset,dialog,ul,li,legend{display:flex;flex-direction:column;position:relative}' +
+    'body>div:first-child{min-height:100vh}' +
+    'p,h1,h2,h3,span{margin:0}h1{font-size:2em;font-weight:700}h2{font-size:1.5em;font-weight:700}h3{font-size:1.17em;font-weight:700}' +
+    'button{border:0;background:#E5E7EB;font:inherit;padding:.6rem;border-radius:.4rem}' +
+    'input,textarea{font:inherit;border:1px solid #ccc;padding:.6rem;border-radius:.4rem;min-width:0}' +
+    'input[type=checkbox]{width:1.3rem;height:1.3rem}' +
+    'header{position:sticky;top:0;z-index:5;flex-direction:row;align-items:center}footer{position:sticky;bottom:0;z-index:5}' +
+    'dialog{position:fixed;inset:0;margin:0;border:0;padding:0;z-index:9;background:rgba(0,0,0,.5);justify-content:center}' +
+    'img{max-width:100%;background:#ddd;min-width:1.5rem;min-height:1.5rem}' +
+    'fieldset{border:1px solid #BDBDBD;border-radius:.4rem;padding:.5rem}';
+  function frame(html, dark) {
+    var bg = dark ? '#0D1117' : '#fff';
+    return '<!doctype html><html><head><meta charset="utf-8"><meta name="color-scheme" content="' + (dark ? 'dark' : 'light') + '">' +
+      '<style>' + BASE + 'html{background:' + bg + '}</style></head><body>' + html + '</body></html>';
+  }
+  function setProblems(list) {
+    st.problems = list; gutter();
+    if (!list.length) { probs.innerHTML = '<div class="ok">No problems.</div>'; return; }
+    probs.innerHTML = '<div class="h">Problems (' + list.length + ')</div>';
+    list.forEach(function (p) {
+      var d = document.createElement('div'); d.className = 'pr' + (p.w ? ' w' : '');
+      var b = document.createElement('b'); b.textContent = 'L' + p.line;
+      var t = document.createElement('div'); t.textContent = p.message;
+      if (p.extra) { var s = document.createElement('small'); s.textContent = p.extra; t.appendChild(s); }
+      d.appendChild(b); d.appendChild(t);
+      d.onclick = function () { if (st.cur !== MAIN) { st.cur = MAIN; drawTabs(); show(); } goLine(p.line); if (document.body.getAttribute('data-v') === 'view') setView('code'); };
+      probs.appendChild(d);
+    });
+  }
+  function run() {
+    if (typeof window.nlRender !== 'function') {
+      $('eng').textContent = 'engine not loaded (nlweb.js)';
+      setProblems([{ line: 1, message: 'The engine (nlweb.js) is not loaded. Run the "Pad (web build)" workflow on GitHub.', file: MAIN }]);
+      return;
+    }
+    $('eng').textContent = '';
+    var files = {};
+    Object.keys(st.files).forEach(function (n) { if (n !== 'data.json') files[n] = st.files[n]; });
+    var r;
+    try { r = JSON.parse(window.nlRender(st.files[MAIN], JSON.stringify(files), st.files['data.json'] || '', st.dark)); }
+    catch (e) { r = { ok: false, line: 1, message: String(e && e.message || e), context: '' }; }
+    if (r.ok) {
+      fr.srcdoc = frame(r.html, st.dark);
+      setProblems(r.warnings.map(function (w) { return { line: w.line, message: w.message, w: true, file: MAIN }; }));
+    } else {
+      var isData = /^Data tab/.test(r.message);
+      setProblems([{ line: r.line, message: r.message, extra: [r.context, r.suggestion ? 'Suggestion: ' + r.suggestion : ''].filter(Boolean).join('\n'), file: isData ? 'data.json' : MAIN }]);
+    }
+  }
+
+  // ---------- header buttons ----------
+  var ex = $('ex');
+  ex.innerHTML = '<option value="">Examples</option>' + Object.keys(EXAMPLES).map(function (k) { return '<option>' + k + '</option>'; }).join('');
+  ex.onchange = function () {
+    if (!ex.value) return;
+    if (confirm('Replace the current files with the "' + ex.value + '" example?')) { st.files = clone(EXAMPLES[ex.value]); st.cur = MAIN; drawTabs(); show(); save(); run(); }
+    ex.value = '';
+  };
+  $('dark').onclick = function () { st.dark = !st.dark; store('nlpad.dark', st.dark ? '1' : '0'); this.classList.toggle('on', st.dark); run(); };
+  $('run').onclick = run;
+  $('share').onclick = function () {
+    var url = location.href.split('#')[0] + '#s=' + btoa(unescape(encodeURIComponent(JSON.stringify(st.files))));
+    history.replaceState(null, '', url);
+    if (navigator.clipboard) navigator.clipboard.writeText(url).then(function () { flash('Link copied'); }, function () { prompt('Copy the link', url); });
+    else prompt('Copy the link', url);
+  };
+  function flash(t) { var b = $('share'), o = b.textContent; b.textContent = t; setTimeout(function () { b.textContent = o; }, 1500); }
+  function setView(v) {
+    document.body.setAttribute('data-v', v);
+    [].forEach.call($('mt').children, function (c) { c.classList.toggle('on', c.getAttribute('data-v') === v); });
+  }
+  [].forEach.call($('mt').children, function (c) { c.onclick = function () { setView(c.getAttribute('data-v')); }; });
+
+  load(); drawTabs(); show();
+  if (window.nlRender) run(); else window.addEventListener('load', run);
+})();
+</script>
+</body>
+</html>
