@@ -1,4 +1,4 @@
-"""Parser HTML do core (port de HtmlParser.kt)."""
+"""HTML parser of the core (port of HtmlParser.kt)."""
 from __future__ import annotations
 
 import re
@@ -64,7 +64,7 @@ class HtmlElement(HtmlNode):
 
 
 class Chunk:
-    """Elemento com key cujo texto nao mudou: nao e re-parseado."""
+    """An element with a key whose text did not change: it is not parsed again."""
     def __init__(self, text: str, element: HtmlElement, native: Native,
                  parent_style: NativeStyle, ids: list[tuple[str, Native]]):
         self.text = text
