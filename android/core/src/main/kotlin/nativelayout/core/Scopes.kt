@@ -43,7 +43,8 @@ object Scopes {
     /** Letters, digits, `_`, `-` and `.` stay; every other byte becomes `%XX`, so `/`, `:` and `~` never appear. */
     fun encode(s: String): String {
         val sb = StringBuilder(s.length)
-        for (b in s.toByteArray(Charsets.UTF_8)) {
+        // ALTERAÇÃO AQUI: Usar encodeToByteArray() em vez de toByteArray(Charsets.UTF_8)
+        for (b in s.encodeToByteArray()) {
             val c = b.toInt() and 0xFF
             val plain = (c >= 'a'.code && c <= 'z'.code) || (c >= 'A'.code && c <= 'Z'.code) ||
                 (c >= '0'.code && c <= '9'.code) || c == '_'.code || c == '-'.code || c == '.'.code
