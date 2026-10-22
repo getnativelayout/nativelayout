@@ -1,10 +1,10 @@
-
+"""Diff between two native trees (port of LayoutDiffer.kt)."""
 from __future__ import annotations
 
 from dataclasses import dataclass
 
 from .tree import (Native, NativeBox, NativeButton, NativeCheckbox, NativeField,
-                   NativeImage, NativeItem, NativeStyle, NativeText, Span,
+                   NativeImage, NativeItem, NativeStyle, NativeText, Position, Span,
                    native_children, same_as)
 
 
@@ -71,7 +71,8 @@ def diff(previous: Native | None, nxt: Native) -> list[Change]:
 def _compare(a: Native, n: Native, removed: list, rest: list) -> None:
     if isinstance(a, NativeBox) and isinstance(n, NativeBox):
         if (a.virtual != n.virtual or a.overlay != n.overlay
-                or a.header != n.header or a.footer != n.footer):
+                or a.header != n.header or a.footer != n.footer
+                or a.has_absolute != n.has_absolute):
             rest.append(Replace(n.key, n))
             return
         if n.virtual:
@@ -129,7 +130,10 @@ def _compare_children(parent: Native, prev: list, nxt: list, removed: list, rest
     for i, n in enumerate(nxt):
         a = old_by_key.get(n.key)
         if a is None:
-            rest.append(Create(parent.key, i, n))
+            # an absolute child lives apart from the flow: its position counts only the absolute ones
+            absolute = n.style.position == Position.ABSOLUTE
+            before = sum(1 for c in nxt[:i] if (c.style.position == Position.ABSOLUTE) == absolute)
+            rest.append(Create(parent.key, before, n))
         elif type(a) is not type(n):
             rest.append(Replace(n.key, n))
         else:
