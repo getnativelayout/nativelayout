@@ -1,4 +1,4 @@
-
+"""Errors of the core (port of NativeLayoutError.kt)."""
 from __future__ import annotations
 
 
