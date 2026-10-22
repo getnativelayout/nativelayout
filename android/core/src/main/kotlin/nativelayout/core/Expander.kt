@@ -13,12 +13,7 @@ class ExpandedScreen(
     val html: String,
     val lineMap: List<Int>,
     /** Things that work but deserve a look, with the line of the `.nl` file (line numbers are the file's own). */
-    val warnings: List<LayoutWarning> = emptyList(),
-    /**
-     * The item of every repetition of a `for` that holds an element with an `id` or a class, by path
-     * (`p:7`, `p:7/o:2`). The program side finds the items here (section 5.7).
-     */
-    val items: Map<String, Any?> = emptyMap()
+    val warnings: List<LayoutWarning> = emptyList()
 )
 
 class ExpandError(
@@ -89,11 +84,7 @@ private class Attr(val key: String, val value: String?)
 
 private val MISSING = Any()
 
-/**
- * [path] is where the code being emitted sits among the repetitions of the `for` loops that contain it
- * (empty outside any `for`). A component keeps the path of the place that includes it.
- */
-private class Scope(val parent: Scope?, val vars: Map<String, Any?>, val path: String = parent?.path ?: "") {
+private class Scope(val parent: Scope?, val vars: Map<String, Any?>) {
     fun find(name: String): Any? {
         var s: Scope? = this
         while (s != null) {
@@ -121,45 +112,10 @@ private class IfNode(val line: Int) : Node() {
 private class ForNode(val line: Int, val variable: String, val listName: String) : Node() {
     val nodes = ArrayList<Node>()
 }
-private class ParamPlan(val name: String, val constant: Any?, val single: String?, val parts: Array<Part>?)
-private class IncludeNode(
-    val line: Int,
-    val component: Component,
-    val params: List<ParamPlan>,
-    val key: Array<Part>?
-) : Node()
 private class Frame(val openLine: Int, var nodes: MutableList<Node>, val ifNode: IfNode?)
 private class Control(val type: String, val argument: String, val variable: String = "")
 
-/** Where the parts of a `.nl` file are, in lines counted from 0. */
-private class FileLayout(
-    val links: List<Pair<String, Int>>,
-    val styleStart: Int,
-    val styleEnd: Int,
-    val bodyStart: Int,
-    val bodyEnd: Int
-)
-
-/** A `.nl` file included by name. [includeLine] is the line of the first `<include>` that asked for it. */
-private class Component(
-    val name: String,
-    val source: String,
-    val lines: List<String>,
-    val layout: FileLayout,
-    val includeLine: Int
-) {
-    var nodes: List<Node> = emptyList()
-}
-
-private class IncludeTag(val attrs: List<Pair<String, String?>>) {
-    fun get(name: String): String? = attrs.firstOrNull { it.first.equals(name, ignoreCase = true) }?.second
-}
-
-private class StyleSource(val text: String, val firstLine: Int, val file: String?, val linkLine: Int)
-
-private val INCLUDE_START = Regex("""^<include(?=[\s/>])""")
-private val KEY_ATTR = Regex("""\skey\s*=\s*"([^"]*)"""")
-private const val MAX_INCLUDE_LEVELS = 8
+private val KEY_FIELDS = listOf("key", "id")
 private val VOID_NAMES = setOf("br", "hr", "img", "input", "meta", "link")
 private val HAS_KEY = Regex("""\skey\s*=""")
 private val FIELD_OR_ID = Regex("""<(?:input|textarea)\b|\sid\s*=""")
@@ -206,10 +162,7 @@ private class DynTag(
     val ruleStyle: String,
     val attrs: Array<AttrPlan>,
     val stateStyles: Array<String> = arrayOf("", "", "")
-) : Part() {
-    /** The tag as text, for a tag with no `{value}` that carries an `id` or a class: used outside any `for`. */
-    var pre: String? = null
-}
+) : Part()
 
 private class Prepared(val rules: List<Rule>, val nodes: List<Node>)
 
@@ -231,40 +184,14 @@ private class ScreenExpander(
     private val warnings = ArrayList<LayoutWarning>()
 
 
-    // While a component is built or emitted, errors name it and point at the line of its <include>.
-    private var currentComponent: String? = null
-    private var currentIncludeLine = 0
-    private val components = LinkedHashMap<String, Component>()
-
-    // Identity of the repetitions of a `for` (section 5.7).
-    private var scopeCounter = 0
-    private var markerHits = 0
-    private val autoKeyed = HashSet<Int>()
-    private val scopeLog = ArrayList<Pair<String, Any?>>()
-
-    private fun err(message: String, line: Int, word: String? = null, suggestion: String? = null): ExpandError {
-        val c = currentComponent
-        return if (c == null) ExpandError(message, line, source, word, suggestion)
-        else ExpandError("in '$c': $message", currentIncludeLine, source, word, suggestion)
-    }
-
-    /** The line to report: inside a component it is the line of the `<include>`. */
-    private fun effLine(line: Int): Int = if (currentComponent != null) currentIncludeLine else line
+    private fun err(message: String, line: Int, word: String? = null, suggestion: String? = null) =
+        ExpandError(message, line, source, word, suggestion)
 
     private fun styleError(message: String, line: Int, word: String?, file: String?, linkLine: Int): ExpandError =
         if (file == null) err("style: $message", line, word)
         else err("style: in '$file' line $line: $message", linkLine, word)
 
-    private fun mainFail(message: String, line: Int, word: String?): Nothing = throw err(message, line, word)
-
-    private fun componentFail(name: String, includeLine: Int): (String, Int, String?) -> Nothing =
-        { message, _, word -> throw ExpandError("in '$name': $message", includeLine, source, word) }
-
-    private fun includeError(fileName: String, message: String, line: Int): ExpandError =
-        if (fileName.isEmpty()) ExpandError(message, line, source)
-        else ExpandError("in '$fileName': $message", line, source)
-
-    private fun linkHref(tag: String, line: Int, fail: (String, Int, String?) -> Nothing): String {
+    private fun linkHref(tag: String, line: Int): String {
         val attrs = HashMap<String, String>()
         val inner = tag.removePrefix("<link").removeSuffix(">").removeSuffix("/")
         for (a in Rx.attrRegex.findAll(inner)) {
@@ -273,26 +200,22 @@ private class ScreenExpander(
         }
         val href = attrs["href"]
         if (href == null || href.isBlank() || attrs["rel"]?.lowercase() != "stylesheet") {
-            fail("markup: <link> needs rel=\"stylesheet\" and a href", line, null)
+            throw err("markup: <link> needs rel=\"stylesheet\" and a href", line)
         }
         if (href.startsWith("/") || href.contains("..") || href.contains("://")) {
-            fail("style: the file '$href' is not allowed", line, href)
+            throw err("style: the file '$href' is not allowed", line, href)
         }
-        if (!href.endsWith(".css")) fail("style: the file '$href' must be a .css file", line, href)
+        if (!href.endsWith(".css")) throw err("style: the file '$href' must be a .css file", line, href)
         return href
     }
 
-    /** Finds the `<link>`, the `<style>` and the `<body>` of a `.nl` file. [fail] reports a mistake and never returns. */
-    private fun scanFile(fileLines: List<String>, fail: (String, Int, String?) -> Nothing): FileLayout {
+    fun expand(): ExpandedScreen {
         var first = 0
-        while (first < fileLines.size && fileLines[first].isBlank()) first++
-        var last = fileLines.size - 1
-        while (last >= 0 && fileLines[last].isBlank()) last--
-        if (first >= last || fileLines[first].trim() != "<nativelayout>" || fileLines[last].trim() != "</nativelayout>") {
-            fail(
-                "the file must start with <nativelayout> and end with </nativelayout>",
-                if (first < fileLines.size) first + 1 else 1, null
-            )
+        while (first < lines.size && lines[first].isBlank()) first++
+        var last = lines.size - 1
+        while (last >= 0 && lines[last].isBlank()) last--
+        if (first >= last || lines[first].trim() != "<nativelayout>" || lines[last].trim() != "</nativelayout>") {
+            throw err("the file must start with <nativelayout> and end with </nativelayout>", if (first < lines.size) first + 1 else 1)
         }
 
         var styleStart = -1
@@ -303,7 +226,7 @@ private class ScreenExpander(
         var i = first + 1
         var inComment = false
         while (i < last) {
-            val t = fileLines[i].trim()
+            val t = lines[i].trim()
             when {
                 inComment -> {
                     if (t.contains("-->")) inComment = false
@@ -313,143 +236,38 @@ private class ScreenExpander(
                 t.startsWith("<!--") -> {
                     if (!t.contains("-->")) inComment = true
                 }
-                t.startsWith("<script") -> fail("markup: <script> is not allowed", i + 1, null)
+                t.startsWith("<script") -> throw err("markup: <script> is not allowed", i + 1)
                 t == "<style>" -> {
-                    if (styleStart >= 0) fail("only one <style> block is allowed", i + 1, null)
+                    if (styleStart >= 0) throw err("only one <style> block is allowed", i + 1)
                     var j = i + 1
-                    while (j < last && fileLines[j].trim() != "</style>") j++
-                    if (j >= last) fail("<style> is never closed with </style>", i + 1, null)
+                    while (j < last && lines[j].trim() != "</style>") j++
+                    if (j >= last) throw err("<style> is never closed with </style>", i + 1)
                     styleStart = i + 1
                     styleEnd = j
                     i = j
                 }
                 t.startsWith("<link") -> {
-                    if (bodyStart >= 0) fail("a <link> must come before <body>", i + 1, null)
-                    links.add(Pair(linkHref(t, i + 1, fail), i + 1))
+                    if (bodyStart >= 0) throw err("a <link> must come before <body>", i + 1)
+                    links.add(Pair(linkHref(t, i + 1), i + 1))
                 }
                 t.startsWith("<body") -> {
-                    if (bodyStart >= 0) fail("the file must have exactly one <body>", i + 1, null)
+                    if (bodyStart >= 0) throw err("the file must have exactly one <body>", i + 1)
                     var j = i + 1
-                    while (j < last && fileLines[j].trim() != "</body>") j++
-                    if (j >= last) fail("<body> is never closed with </body>", i + 1, null)
+                    while (j < last && lines[j].trim() != "</body>") j++
+                    if (j >= last) throw err("<body> is never closed with </body>", i + 1)
                     bodyStart = i
                     bodyEnd = j
                     i = j
                 }
-                else -> fail("only <style> and <body> are allowed inside <nativelayout>", i + 1, null)
+                else -> throw err("only <style> and <body> are allowed inside <nativelayout>", i + 1)
             }
             i++
         }
-        if (bodyStart < 0) fail("the file must have exactly one <body>", first + 1, null)
-        return FileLayout(links, styleStart, styleEnd, bodyStart, bodyEnd)
-    }
-
-    // ---------- components: <include> (section 5.6)
-
-    private fun joinPath(from: String, rel: String): String {
-        val dir = from.substringBeforeLast('/', "")
-        return if (dir.isEmpty()) rel else "$dir/$rel"
-    }
-
-    /** The `<include>` of a line, or null when the line has none. It must be alone on its line, like a control line. */
-    private fun includeTagOf(raw: String, reportLine: Int, fileName: String): IncludeTag? {
-        val t = raw.trim()
-        if (!INCLUDE_START.containsMatchIn(t)) return null
-        val m = Rx.tagRegex.find(t)
-        if (m == null || m.range.first != 0 || m.range.last != t.length - 1) {
-            throw includeError(fileName, "markup: <include> must be alone on its line", reportLine)
-        }
-        val inner = t.substring("<include".length, t.length - 1).removeSuffix("/")
-        val attrs = ArrayList<Pair<String, String?>>()
-        for (a in Rx.attrRegex.findAll(inner)) {
-            attrs.add(Pair(a.groupValues[1], a.groups[2]?.value ?: a.groups[3]?.value ?: a.groups[4]?.value))
-        }
-        return IncludeTag(attrs)
-    }
-
-    private fun componentPath(from: String, src: String, line: Int): String {
-        if (src.isBlank() || src.startsWith("/") || src.contains("..") || src.contains("://")) {
-            throw includeError(from, "include: the file '$src' is not allowed", line)
-        }
-        if (!src.endsWith(".nl")) throw includeError(from, "include: the file '$src' must be a .nl file", line)
-        return joinPath(from, src)
-    }
-
-    /**
-     * Loads, in order of appearance, every component that the file includes, and the ones they include.
-     * [chain] holds the components being read now, to catch a file that includes itself.
-     */
-    private fun collectIncludes(
-        fileName: String, fileLines: List<String>, layout: FileLayout, chain: List<String>, mainLine: Int
-    ) {
-        for (idx in layout.bodyStart + 1 until layout.bodyEnd) {
-            val line = if (fileName.isEmpty()) idx + 1 else mainLine
-            val tag = includeTagOf(fileLines[idx], line, fileName) ?: continue
-            val src = tag.get("src")?.takeIf { it.isNotBlank() }
-                ?: throw includeError(fileName, "markup: <include> requires a src attribute", line)
-            val name = componentPath(fileName, src, line)
-            if (name == fileName || name in chain) throw includeError(fileName, "include: '$name' includes itself", line)
-            if (chain.size >= MAX_INCLUDE_LEVELS) {
-                throw includeError(fileName, "include: too many nested includes (the limit is $MAX_INCLUDE_LEVELS)", line)
-            }
-            if (name in components) continue
-            val text = resolve(name) ?: throw includeError(fileName, "include: the file '$name' was not found", line)
-            val compLines = text.split("\n")
-            val compLayout = scanFile(compLines, componentFail(name, line))
-            components[name] = Component(name, text, compLines, compLayout, line)
-            collectIncludes(name, compLines, compLayout, chain + name, line)
-        }
-    }
-
-    private fun paramPlan(name: String, value: String?): ParamPlan {
-        if (value == null) return ParamPlan(name, true, null, null)
-        if (!value.contains("{")) return ParamPlan(name, value, null, null)
-        val single = Rx.singleValueRegex.find(value.trim())?.groupValues?.get(1)
-        if (single != null) return ParamPlan(name, null, single, null)
-        return ParamPlan(name, null, null, compileValue(value))
-    }
-
-    private fun makeInclude(tag: IncludeTag, fileName: String, line: Int): IncludeNode {
-        val src = tag.get("src") ?: throw err("markup: <include> requires a src attribute", line)
-        val component = components[joinPath(fileName, src)]
-            ?: throw err("include: the file '$src' was not found", line)
-        val params = ArrayList<ParamPlan>()
-        var key: Array<Part>? = null
-        for ((name, value) in tag.attrs) {
-            when (name.lowercase()) {
-                "src" -> {}
-                "key" -> key = if (value != null) compileValue(value) else null
-                else -> params.add(paramPlan(name, value))
-            }
-        }
-        return IncludeNode(line, component, params, key)
-    }
-
-    fun expand(): ExpandedScreen {
-        val layout = scanFile(lines, ::mainFail)
-        collectIncludes("", lines, layout, emptyList(), 0)
-        val styleStart = layout.styleStart
-        val styleEnd = layout.styleEnd
-
-        // The style files of the components come first, so the screen can override them.
-        val componentLoaded = HashSet<String>()
-        val componentSheets = ArrayList<Triple<String, Int, String>>()
-        for (comp in components.values) {
-            for ((href, _) in comp.layout.links) {
-                val path = joinPath(comp.name, href)
-                if (!componentLoaded.add(path)) continue
-                val css = resolve(path)
-                    ?: throw ExpandError("style: the file '$path' was not found", comp.includeLine, source, path)
-                if (css.contains("@import")) {
-                    throw ExpandError("style: a style file cannot import another file", comp.includeLine, source, path)
-                }
-                componentSheets.add(Triple(path, comp.includeLine, css))
-            }
-        }
+        if (bodyStart < 0) throw err("the file must have exactly one <body>", first + 1)
 
         val loaded = HashSet<String>()
         val sheets = ArrayList<Triple<String, Int, String>>()
-        for ((href, linkLine) in layout.links) {
+        for ((href, linkLine) in links) {
             if (!loaded.add(href)) continue
             val css = resolve(href) ?: throw err("style: the file '$href' was not found", linkLine, href)
             if (css.contains("@import")) throw err("style: a style file cannot import another file", linkLine, href)
@@ -457,9 +275,6 @@ private class ScreenExpander(
         }
 
         val key = StringBuilder(source.length + 64).append(if (dark) 'd' else 'l').append('\u0001').append(source)
-        for (comp in components.values) key.append('\u0002').append(comp.name).append('\u0003').append(comp.source)
-        for (sheet in componentSheets) key.append('\u0000').append(sheet.third)
-        key.append('\u0004')
         for (sheet in sheets) key.append('\u0000').append(sheet.third)
         val cacheKey = key.toString()
 
@@ -469,30 +284,14 @@ private class ScreenExpander(
             prepared = hit
             rules = hit.rules
         } else {
-            for (sheet in componentSheets) parseStyle(sheet.third, 1, sheet.first, sheet.second)
-            for (comp in components.values) {
-                val l = comp.layout
-                if (l.styleStart >= 0) {
-                    parseStyle(
-                        comp.lines.subList(l.styleStart, l.styleEnd).joinToString("\n"),
-                        l.styleStart + 1, comp.name, comp.includeLine
-                    )
-                }
-            }
             for (sheet in sheets) parseStyle(sheet.third, 1, sheet.first, sheet.second)
             if (styleStart >= 0) parseStyle(lines.subList(styleStart, styleEnd).joinToString("\n"), styleStart + 1)
             resolveVariables()
-            for (comp in components.values) {
-                currentComponent = comp.name
-                currentIncludeLine = comp.includeLine
-                comp.nodes = buildNodes(comp.lines, comp.layout.bodyStart, comp.layout.bodyEnd, comp.name)
-            }
-            currentComponent = null
-            prepared = Prepared(rules, buildNodes(lines, layout.bodyStart, layout.bodyEnd, ""))
+            prepared = Prepared(rules, buildNodes(bodyStart, bodyEnd))
             Expander.store(cacheKey, prepared)
         }
         emit(prepared.nodes, Scope(null, data))
-        return ExpandedScreen(out.joinToString("\n"), outLines, warnings.toList(), scopeLog.toMap())
+        return ExpandedScreen(out.joinToString("\n"), outLines, warnings.toList())
     }
 
     private fun flattenMedia(text: String, firstLine: Int, file: String?, linkLine: Int): String {
@@ -534,9 +333,8 @@ private class ScreenExpander(
         val commentless = Rx.commentRegex.replace(text) { m -> m.value.filter { it == '\n' } }
         val clean = flattenMedia(commentless, firstLine, file, linkLine)
         for (m in Rx.ruleRegex.findAll(clean)) {
-            val selectorGroup = m.groups[1]!!
-            val selectorText = selectorGroup.value
-            val offset = selectorGroup.range.first + (selectorText.length - selectorText.trimStart().length)
+            val selectorText = m.groupValues[1]
+            val offset = m.range.first + (selectorText.length - selectorText.trimStart().length)
             val line = firstLine + clean.substring(0, offset).count { it == '\n' }
             val declarations = ArrayList<Pair<String, String>>()
             for (part in m.groupValues[2].split(";")) {
@@ -614,19 +412,16 @@ private class ScreenExpander(
         return Control(keyword, condition)
     }
 
-    private fun buildNodes(fileLines: List<String>, from: Int, to: Int, fileName: String): List<Node> {
+    private fun buildNodes(from: Int, to: Int): List<Node> {
         val root = ArrayList<Node>()
         val stack = ArrayList<Frame>()
         stack.add(Frame(0, root, null))
         for (idx in from..to) {
             val line = idx + 1
-            val control = if (idx == from || idx == to) null else parseControl(fileLines[idx].trim(), line)
+            val control = if (idx == from || idx == to) null else parseControl(lines[idx].trim(), line)
             val top = stack[stack.size - 1]
             if (control == null) {
-                val include = if (idx == from || idx == to) null
-                else includeTagOf(fileLines[idx], if (fileName.isEmpty()) line else currentIncludeLine, fileName)
-                if (include != null) top.nodes.add(makeInclude(include, fileName, line))
-                else top.nodes.add(TextNode(fileLines[idx], line))
+                top.nodes.add(TextNode(lines[idx], line))
                 continue
             }
             when (control.type) {
@@ -670,9 +465,8 @@ private class ScreenExpander(
             when (node) {
                 is TextNode -> {
                     val parts = node.parts ?: compileLine(node.text).also { node.parts = it }
-                    val line = effLine(node.line)
-                    out.add(renderParts(parts, line, scope))
-                    outLines.add(line)
+                    out.add(renderParts(parts, node.line, scope))
+                    outLines.add(node.line)
                 }
                 is IfNode -> {
                     for (branch in node.branches) {
@@ -684,121 +478,36 @@ private class ScreenExpander(
                     }
                 }
                 is ForNode -> {
-                    val ln = effLine(node.line)
-                    val list = lookup(node.listName, ln, scope)
-                    if (list !is List<*>) throw err("'${node.listName}' is not a list", ln, node.listName)
-                    if (scope.has(node.variable)) throw err("the name '${node.variable}' already exists", ln, node.variable)
+                    val list = lookup(node.listName, node.line, scope)
+                    if (list !is List<*>) throw err("'${node.listName}' is not a list", node.line, node.listName)
+                    if (scope.has(node.variable)) throw err("the name '${node.variable}' already exists", node.line, node.variable)
                     var positionWarned = false
-                    var index = 0
                     for (item in list) {
-                        // Ids and taps inside the item carry the path of the repetition. It is written with a
-                        // marker first, because the key of the item is only known after the item is emitted.
-                        val marker = "\u0001${scopeCounter++}\u0002"
-                        val childPath = if (scope.path.isEmpty()) marker else scope.path + "/" + marker
                         val first = out.size
-                        val logFirst = scopeLog.size
-                        val hits = markerHits
-                        emit(node.nodes, Scope(scope, mapOf(node.variable to item), childPath))
-                        val itemKey = keyOfItem(item)
-                        if (markerHits != hits) {
-                            val segment = node.variable + ":" + Scopes.token(firstLevelKey(first) ?: itemKey, index)
-                            for (k in first until out.size) {
-                                if (out[k].indexOf('\u0001') >= 0) out[k] = out[k].replace(marker, segment)
-                            }
-                            for (k in logFirst until scopeLog.size) {
-                                val entry = scopeLog[k]
-                                if (entry.first.indexOf('\u0001') >= 0) {
-                                    scopeLog[k] = Pair(entry.first.replace(marker, segment), entry.second)
-                                }
-                            }
-                            scopeLog.add(Pair(if (scope.path.isEmpty()) segment else scope.path + "/" + segment, item))
-                        }
-                        val keyed = applyKey(first, itemKey)
+                        emit(node.nodes, Scope(scope, mapOf(node.variable to item)))
+                        val keyed = applyKey(first, keyOfItem(item))
                         if (!keyed && !positionWarned && holdsFieldsOrIds(first)) {
                             positionWarned = true
-                            val w = LayoutWarning("the items of this list have no id: using the position", ln)
+                            val w = LayoutWarning("the items of this list have no id: using the position", node.line)
                             if (warnings.none { it.message == w.message && it.line == w.line }) warnings.add(w)
                         }
-                        index++
                     }
-                }
-                is IncludeNode -> {
-                    val ln = effLine(node.line)
-                    val given = LinkedHashMap<String, Any?>()
-                    for (p in node.params) given[p.name] = paramValue(p, ln, scope)
-                    val keyText = node.key?.let { rawText(it, ln, scope).trim() }?.takeIf { it.isNotEmpty() }
-                    val first = out.size
-                    val savedComponent = currentComponent
-                    val savedLine = currentIncludeLine
-                    if (savedComponent == null) currentIncludeLine = node.line
-                    currentComponent = node.component.name
-                    try {
-                        emit(node.component.nodes, Scope(null, given, scope.path))
-                    } finally {
-                        currentComponent = savedComponent
-                        currentIncludeLine = savedLine
-                    }
-                    if (keyText != null) applyKey(first, keyText)
                 }
             }
         }
     }
 
-    private fun keyOfItem(item: Any?): String? = Scopes.keyOfItem(item)
-
-    /** The value of a parameter of an `<include>`: a name is handed over as it is, whatever its type. */
-    private fun paramValue(p: ParamPlan, line: Int, scope: Scope): Any? {
-        val single = p.single
-        if (single != null) return lookupPath(single, single.split("."), line, scope)
-        val parts = p.parts
-        if (parts != null) return rawText(parts, line, scope)
-        return p.constant
-    }
-
-    /** Parts joined as plain text, with no escaping: it is a value for the program side, not HTML. */
-    private fun rawText(parts: Array<Part>, line: Int, scope: Scope): String {
-        val sb = StringBuilder()
-        for (p in parts) {
-            when (p) {
-                is Lit -> sb.append(p.s)
-                is Val -> sb.append(rawValue(p, line, scope))
-                is DynTag -> {}
-            }
-        }
-        return sb.toString()
-    }
-
-    private fun rawValue(v: Val, line: Int, scope: Scope): String {
-        if (!v.ok) {
-            throw err("arithmetic is not supported in '{${v.inner}}'; give the program's result as a name", line)
-        }
-        val name = v.name
-        return when (val x = lookupPath(name, v.path, line, scope)) {
-            null -> ""
-            is String -> x
-            is Boolean -> x.toString()
-            is Number -> formatNumber(x)
-            is List<*> -> throw err("'{$name}' is a list; use 'for ${singular(name)} in $name:'", line, name)
-            is Map<*, *> -> throw err("'{$name}' is a map; use a name inside it, like '{$name.field}'", line, name)
-            else -> x.toString()
-        }
-    }
-
-    /** The `key` that the author wrote on an element at the first level of what an item emitted, if any. */
-    private fun firstLevelKey(first: Int): String? {
-        var depth = 0
-        for (k in first until out.size) {
-            for (m in Rx.tagRegex.findAll(out[k])) {
-                val tag = m.value
-                if (tag.startsWith("<!")) continue
-                if (tag.startsWith("</")) {
-                    depth--
-                    continue
-                }
-                val name = Rx.tagNameRegex.find(tag)?.groupValues?.get(1)?.lowercase() ?: continue
-                // a key that an inner `for` wrote by itself is not the author's key
-                if (depth == 0 && k !in autoKeyed) KEY_ATTR.find(tag)?.let { return it.groupValues[1] }
-                if (name !in VOID_NAMES && !tag.endsWith("/>")) depth++
+    /**
+     * The automatic key of an item (section 5.7): its field `key`, or else its field `id`.
+     * Only text and whole numbers count. Anything else gives null and the position is used.
+     */
+    private fun keyOfItem(item: Any?): String? {
+        if (item !is Map<*, *>) return null
+        for (field in KEY_FIELDS) {
+            when (val v = item[field]) {
+                is String -> v.trim().takeIf { it.isNotEmpty() }?.let { return it }
+                is Int, is Long, is Short, is Byte -> return v.toString()
+                else -> {}
             }
         }
         return null
@@ -835,7 +544,6 @@ private class ScreenExpander(
             rebuilt?.let {
                 it.append(line, copied, line.length)
                 out[k] = it.toString()
-                autoKeyed.add(k)
             }
         }
         return true
@@ -850,16 +558,9 @@ private class ScreenExpander(
     private fun lookup(name: String, line: Int, scope: Scope): Any? =
         lookupPath(name, name.split("."), line, scope)
 
-    /** A name that was not given: by the program, or, inside a component, by the `<include>`. */
-    private fun missing(name: String, line: Int, word: String): ExpandError {
-        val c = currentComponent
-        return if (c == null) err("the name '$name' was not given by the program", line, word)
-        else ExpandError("include: the name '$name' was not given to '$c'", currentIncludeLine, source, word)
-    }
-
     private fun lookupPath(name: String, parts: List<String>, line: Int, scope: Scope): Any? {
         var value: Any? = scope.find(parts[0])
-        if (value === MISSING) throw missing(name, line, parts[0])
+        if (value === MISSING) throw err("the name '$name' was not given by the program", line, parts[0])
         for (k in 1 until parts.size) {
             val part = parts[k]
             val current = value
@@ -868,7 +569,7 @@ private class ScreenExpander(
                 part == "size" && current is Map<*, *> -> current.size
                 part == "size" && current is List<*> -> current.size
                 part == "size" && current is String -> current.length
-                else -> throw missing(name, line, parts[0])
+                else -> throw err("the name '$name' was not given by the program", line, parts[0])
             }
         }
         return value
@@ -1083,10 +784,7 @@ private class ScreenExpander(
             when (p) {
                 is Lit -> sb.append(p.s)
                 is Val -> sb.append(valText(p, line, scope))
-                is DynTag -> {
-                    val pre = p.pre
-                    sb.append(if (pre != null && scope.path.isEmpty()) pre else renderDyn(p, line, scope))
-                }
+                is DynTag -> sb.append(renderDyn(p, line, scope))
             }
         }
         return sb.toString()
@@ -1145,20 +843,12 @@ private class ScreenExpander(
                 styleFor(lower, classes, id, STATE_FOCUS)
             )
         )
-        if (anyBrace) return plan
-        val pre = renderDyn(plan, 0, EMPTY_SCOPE)
-        // an id or a class may need the path of a repetition, which is only known when the line is emitted
-        if (attrs.any { it.key == "id" || it.key == "class" }) {
-            plan.pre = pre
-            return plan
-        }
-        return Lit(pre)
+        return if (anyBrace) plan else Lit(renderDyn(plan, 0, EMPTY_SCOPE))
     }
 
     private fun renderDyn(t: DynTag, line: Int, scope: Scope): String {
         val result = ArrayList<Attr>(t.attrs.size + 1)
         var inline = ""
-        var scoped = false
         for (a in t.attrs) {
             var value: String? = a.value
             if (a.brace) {
@@ -1171,16 +861,7 @@ private class ScreenExpander(
                 }
                 value = renderParts(a.textParts!!, line, scope)
             }
-            if ((a.key == "id" || a.key == "class") && scope.path.isNotEmpty()) {
-                scoped = true
-                if (a.key == "id" && value != null) value = value + Scopes.SEP + scope.path
-            }
             if (a.key == "style") inline = value ?: "" else result.add(Attr(a.orig, value))
-        }
-        if (scoped) {
-            // where this element sits among the repetitions: the program asks "the item of the tap" with it
-            result.add(Attr("scope", scope.path))
-            markerHits++
         }
 
         val parts = ArrayList<String>()
