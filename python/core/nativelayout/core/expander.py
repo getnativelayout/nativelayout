@@ -1,4 +1,4 @@
-"""Expander: `.nl` -> HTML puro com {valor}, if/for/include e estilos (port de Expander.kt)."""
+"""Expander: `.nl` -> plain HTML with {value}, if/for/include and styles (port of Expander.kt)."""
 from __future__ import annotations
 
 import math
@@ -17,7 +17,7 @@ class ExpandedScreen:
     html: str
     line_map: list[int]
     warnings: list[LayoutWarning] = field(default_factory=list)
-    # O item de cada repeticao de um `for` que tem id ou classe, por caminho (`p:7`, `p:7/o:2`).
+    # The item of each repetition of a `for` that has an id or a class, by path (`p:7`, `p:7/o:2`).
     items: dict[str, object] = field(default_factory=dict)
 
 
@@ -71,7 +71,7 @@ def _first(m: re.Match, *idx: int) -> str | None:
     return None
 
 
-# ---------------------------------------------------------------- modelo
+# ---------------------------------------------------------------- model
 class Rule:
     def __init__(self, kind, name, declarations, order, line, file, link_line, state=STATE_NONE):
         self.kind = kind
@@ -277,7 +277,7 @@ def _store(key: str, prepared: Prepared) -> None:
         _cache[key] = prepared
 
 
-# ---------------------------------------------------------------- utilitarios
+# ---------------------------------------------------------------- utilities
 def _escape_html(s: str) -> str:
     return s.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;").replace('"', "&quot;")
 
@@ -328,7 +328,7 @@ def _merge_lits(lst: list[Part]) -> list[Part]:
     return out
 
 
-# ---------------------------------------------------------------- expansor
+# ---------------------------------------------------------------- expander
 class _ScreenExpander:
     def __init__(self, source: str, data: dict, resolve, dark: bool):
         self.source = source
@@ -350,7 +350,7 @@ class _ScreenExpander:
         self.auto_keyed: set[int] = set()
         self.scope_log: list[tuple[str, object]] = []
 
-    # -- erros
+    # -- errors
     def err(self, message: str, line: int, word: str | None = None, suggestion: str | None = None):
         c = self.current_component
         if c is None:
@@ -378,7 +378,7 @@ class _ScreenExpander:
             return ExpandError(message, line, self.source)
         return ExpandError(f"in '{file_name}': {message}", line, self.source)
 
-    # -- ficheiro .nl
+    # -- .nl file
     @staticmethod
     def _link_href(tag: str, line: int, fail) -> str:
         attrs: dict[str, str] = {}
@@ -459,7 +459,7 @@ class _ScreenExpander:
             fail("the file must have exactly one <body>", first + 1, None)
         return FileLayout(links, style_start, style_end, body_start, body_end)
 
-    # -- componentes: <include>
+    # -- components: <include>
     def _include_tag_of(self, raw: str, report_line: int, file_name: str) -> IncludeTag | None:
         t = raw.strip()
         if INCLUDE_START.search(t) is None:
@@ -533,7 +533,7 @@ class _ScreenExpander:
                 params.append(self._param_plan(name, value))
         return IncludeNode(line, component, params, key)
 
-    # -- entrada
+    # -- input
     def expand(self) -> ExpandedScreen:
         layout = self._scan_file(self.lines, self.main_fail)
         self._collect_includes("", self.lines, layout, [], 0)
@@ -607,7 +607,7 @@ class _ScreenExpander:
         self._emit(prepared.nodes, Scope(None, self.data))
         return ExpandedScreen("\n".join(self.out), self.out_lines, list(self.warnings), dict(self.scope_log))
 
-    # -- estilos
+    # -- styles
     def _flatten_media(self, text: str, first_line: int, file, link_line) -> str:
         t = text
         while True:
@@ -712,7 +712,7 @@ class _ScreenExpander:
             rule.resolved = [(n, self._substitute_vars(v, rule))
                              for n, v in rule.declarations if not n.startswith("--")]
 
-    # -- linhas de controlo
+    # -- control lines
     def _parse_control(self, t: str, line: int) -> Control | None:
         if t == "end":
             return Control("end", "")
@@ -785,7 +785,7 @@ class _ScreenExpander:
                            open_.open_line)
         return root
 
-    # -- emissao
+    # -- emission
     def _emit(self, nodes: list[Node], scope: Scope) -> None:
         for node in nodes:
             if isinstance(node, TextNode):
@@ -814,8 +814,8 @@ class _ScreenExpander:
             raise self.err(f"the name '{node.variable}' already exists", ln, node.variable)
         position_warned = False
         for index, item in enumerate(lst):
-            # ids e toques dentro do item levam o caminho da repeticao; escreve-se com um marcador
-            # porque a chave do item so e conhecida depois de o item ser emitido.
+            # ids and taps inside the item carry the path of the repetition; it is written with a marker
+            # because the key of the item is only known after the item has been emitted.
             marker = f"\x01{self.scope_counter}\x02"
             self.scope_counter += 1
             child_path = marker if not scope.path else scope.path + "/" + marker
@@ -906,7 +906,7 @@ class _ScreenExpander:
     def _val_text(self, v: Val, line: int, scope: Scope) -> str:
         return self._value_text(v, line, scope, True)
 
-    # -- chaves das repeticoes
+    # -- keys of the repetitions
     def _first_level_key(self, first: int) -> str | None:
         depth = 0
         for k in range(first, len(self.out)):
@@ -921,7 +921,7 @@ class _ScreenExpander:
                 if nm is None:
                     continue
                 name = nm.group(1).lower()
-                # uma key que um `for` interior escreveu sozinho nao e a key do autor
+                # a key that an inner `for` wrote by itself is not the key of the author
                 if depth == 0 and k not in self.auto_keyed:
                     km = KEY_ATTR.search(tag)
                     if km is not None:
@@ -968,7 +968,7 @@ class _ScreenExpander:
     def _holds_fields_or_ids(self, first: int) -> bool:
         return any(FIELD_OR_ID.search(self.out[k]) for k in range(first, len(self.out)))
 
-    # -- nomes
+    # -- names
     def _lookup(self, name: str, line: int, scope: Scope):
         return self._lookup_path(name, name.split("."), line, scope)
 
@@ -993,7 +993,7 @@ class _ScreenExpander:
                 raise self._missing(name, line, parts[0])
         return value
 
-    # -- condicoes
+    # -- conditions
     def _tokenize(self, text: str, line: int) -> list[str]:
         tokens: list[str] = []
         pos = 0
@@ -1013,7 +1013,7 @@ class _ScreenExpander:
             branch.tokens = self._tokenize(condition, branch.line)
         return _ConditionParser(self, branch.tokens, condition, branch.line, scope).run()
 
-    # -- compilacao de linhas
+    # -- compiling lines
     def _compile_text(self, text: str, lst: list[Part]) -> None:
         pos = 0
         for m in BRACE_RE.finditer(text):
@@ -1112,7 +1112,7 @@ class _ScreenExpander:
         if any_brace:
             return plan
         pre = self._render_dyn(plan, 0, Scope(None, {}))
-        # um id ou uma classe pode precisar do caminho de uma repeticao, so conhecido ao emitir a linha
+        # an id or a class may need the path of a repetition, only known when the line is emitted
         if any(a.key in ("id", "class") for a in attrs):
             plan.pre = pre
             return plan
