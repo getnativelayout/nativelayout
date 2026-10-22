@@ -1,6 +1,6 @@
-"""Contrato do host e sessao de render (port de LayoutHost.kt).
+"""Contract of the host and render session (port of LayoutHost.kt).
 
-`next_event` e assincrono (no Kotlin e `suspend`): no Kivy corre sobre asyncio.
+`next_event` is asynchronous (`suspend` in Kotlin): in Kivy it runs on asyncio.
 """
 from __future__ import annotations
 
@@ -12,7 +12,7 @@ from .differ import Change, diff
 from .layout_engine import LayoutEngine, LayoutWarning
 from .tree import Native, native_children
 
-# Chave do evento enviado pelo host quando o botao "voltar" do sistema e premido.
+# Key of the event the host sends when the system back button is pressed.
 BACK_EVENT_KEY = "\u0000back"
 
 
@@ -53,10 +53,10 @@ class LayoutHost(ABC):
     def close(self) -> None: ...
 
     def show_error(self, text: str) -> None:
-        """Mostra um erro no lugar do ecra (opcional)."""
+        """Shows an error in place of the screen (optional)."""
 
     def post_back(self) -> None:
-        """Acorda o programa com o evento do botao voltar (opcional)."""
+        """Wakes the program with the back-button event (optional)."""
 
 
 @dataclass
@@ -68,7 +68,7 @@ class FilledMarkup:
 
 @dataclass
 class PreparedRender:
-    """Resultado de `LayoutSession.prepare`: dados puros, podem ser construidos em qualquer thread."""
+    """Result of `LayoutSession.prepare`: plain data, it can be built on any thread."""
     root: Native
     by_key: dict[str, Native]
     by_id: dict[str, Native]
@@ -89,7 +89,7 @@ class LayoutSession:
         self.warnings: list[LayoutWarning] = []
 
     def prepare(self, m: FilledMarkup) -> PreparedRender:
-        """Parte pesada: constroi a arvore, indexa e compara com a que esta no ecra. Nao toca no host."""
+        """Heavy part: builds the tree, indexes it and diffs it against the one on screen. Does not touch the host."""
         r = LayoutEngine.build(m.html, m.line, m.variables)
         changes = diff(self._tree, r.root)
         by_key: dict[str, Native] = {}
@@ -97,7 +97,7 @@ class LayoutSession:
         return PreparedRender(r.root, by_key, r.by_id, changes, r.warnings)
 
     async def commit(self, p: PreparedRender) -> bool:
-        """Parte leve: aplica as mudancas as views e espera o proximo evento (na thread das views)."""
+        """Light part: applies the changes to the views and waits for the next event (on the thread of the views)."""
         if self._closed:
             return False
         for a in p.warnings:
@@ -123,7 +123,7 @@ class LayoutSession:
     async def render(self, m: FilledMarkup) -> bool:
         return await self.commit(self.prepare(m))
 
-    # ---- identidade dentro de um `for` (secao 5.7)
+    # ---- identity inside a `for` (section 5.7)
     def set_scope_items(self, items: dict[str, object]) -> None:
         self._items = items
 
@@ -208,7 +208,7 @@ class LayoutSession:
         return self._last_event is not None and self._last_event.key == BACK_EVENT_KEY
 
     def reset(self) -> None:
-        """Esquece a arvore no ecra: o proximo render constroi tudo de novo (mudanca de ecra)."""
+        """Forgets the tree on screen: the next render builds everything from scratch (the screen changed)."""
         self._tree = None
 
     def field_text(self, id: str, given: list | None = None) -> str | None:
