@@ -1,6 +1,6 @@
-"""Arvore nativa e estilo (port de NativeTree.kt).
+"""Native tree and style (port of NativeTree.kt).
 
-Cores: inteiros ARGB sem sinal (0xAARRGGBB). 0 = transparente.
+Colors: unsigned ARGB integers (0xAARRGGBB). 0 = transparent.
 """
 from __future__ import annotations
 
@@ -78,11 +78,34 @@ class Align(Enum):
 
 
 class Dock(Enum):
+    """Where a <footer> sits: BOTTOM (the default) takes its space, the others float over the screen."""
     BOTTOM = auto()
     TOP = auto()
     LEFT = auto()
     RIGHT = auto()
     CENTER = auto()
+
+
+class Position(Enum):
+    """`position`: STATIC stays in the flow of its parent; ABSOLUTE leaves it and is placed by top, right, bottom, left."""
+    STATIC = auto()
+    ABSOLUTE = auto()
+
+
+class ImageFit(Enum):
+    """How an image fills its box: COVER fills and crops, CONTAIN fits whole, FILL stretches."""
+    COVER = auto()
+    CONTAIN = auto()
+    FILL = auto()
+
+
+class ImagePos(Enum):
+    """Which part of a cover or contain image stays in view, or the side where it sits."""
+    CENTER = auto()
+    TOP = auto()
+    BOTTOM = auto()
+    LEFT = auto()
+    RIGHT = auto()
 
 
 class TextAlign(Enum):
@@ -129,7 +152,7 @@ class Sides:
 
 @dataclass(frozen=True)
 class Corners:
-    """Ordem CSS: top-left, top-right, bottom-right, bottom-left."""
+    """CSS order: top-left, top-right, bottom-right, bottom-left."""
     top_left: Length = Length.ZERO
     top_right: Length = Length.ZERO
     bottom_right: Length = Length.ZERO
@@ -158,7 +181,7 @@ LineHeight = LineHeightMultiple | LineHeightFixed
 
 @dataclass(frozen=True)
 class Gradient:
-    """angle em graus CSS (0 = to top, 90 = to right, 180 = to bottom)."""
+    """angle in CSS degrees (0 = to top, 90 = to right, 180 = to bottom)."""
     angle: int
     colors: tuple[int, ...]
 
@@ -224,6 +247,17 @@ class NativeStyle:
     overflow_hidden: bool = False
     align_self: Align | None = None
     dock: Dock | None = None
+    position: Position = Position.STATIC
+    top: Length | None = None
+    right: Length | None = None
+    bottom: Length | None = None
+    left: Length | None = None
+    z_index: int = 0
+    # name of a background image, resolved by the host like the source of an <img>
+    background_image: str | None = None
+    background_size: ImageFit = ImageFit.COVER
+    background_position: ImagePos = ImagePos.CENTER
+    object_fit: ImageFit = ImageFit.CONTAIN
     wrap: bool = False
     elevation: Length = Length.ZERO
     gradient: Gradient | None = None
@@ -260,6 +294,8 @@ class NativeBox(Native):
     overlay: bool = False   # <dialog>
     header: bool = False    # <header>
     footer: bool = False    # <footer>
+    # True when a child is `position: absolute`: the host gives the box a frame for them
+    has_absolute: bool = False
 
 
 @dataclass(eq=False, kw_only=True)
@@ -358,7 +394,8 @@ def same_as(a: Native, o: Native) -> bool:
         same = a.marker == o.marker
     elif isinstance(a, NativeBox):
         same = (a.virtual == o.virtual and a.overlay == o.overlay
-                and a.header == o.header and a.footer == o.footer)
+                and a.header == o.header and a.footer == o.footer
+                and a.has_absolute == o.has_absolute)
     else:
         same = True
     if not same:
