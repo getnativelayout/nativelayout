@@ -1,4 +1,4 @@
-
+"""Parser of CSS declarations and values (port of Css.kt)."""
 from __future__ import annotations
 
 import math
@@ -18,12 +18,12 @@ class CssDeclaration:
 
 
 def _round(x: float) -> int:
-    """Como Kotlin roundToInt: meio arredonda para cima."""
+    """Like Kotlin roundToInt: halves round up."""
     return int(math.floor(x + 0.5))
 
 
 def _to_float(s: str) -> float | None:
-    """Como toFloatOrNull: numero decimal finito, sem '_'."""
+    """Like toFloatOrNull: a finite decimal number, without '_'."""
     if "_" in s or not s.strip() == s:
         return None
     try:
@@ -200,7 +200,7 @@ def length(text: str) -> Length | None:
 
 
 def fraction(text: str) -> float | None:
-    """Numero de 0 a 1, ou percentagem (opacity)."""
+    """A number from 0 to 1, or a percentage (opacity)."""
     t = text.strip().lower()
     if t.endswith("%"):
         v = _to_float(t[:-1])
