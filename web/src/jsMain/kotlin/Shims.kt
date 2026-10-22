@@ -17,3 +17,16 @@ internal inline fun <R> synchronized(@Suppress("UNUSED_PARAMETER") lock: Any, bl
 internal object Math {
     fun floor(d: Double): Double = kotlin.math.floor(d)
 }
+
+// --- ADIÇÕES PARA O KOTLIN/JS ---
+
+// Simula o java.lang.Character (usado no HtmlParser.kt)
+internal object Character {
+    fun isValidCodePoint(codePoint: Int): Boolean = codePoint in 0..0x10FFFF
+    fun toChars(codePoint: Int): CharArray = charArrayOf(codePoint.toChar())
+}
+
+// Simula o java.nio.charset.Charsets (usado no Scopes.kt)
+internal object Charsets {
+    val UTF_8: dynamic = js("({ name: 'UTF-8' })")
+}
