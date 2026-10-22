@@ -1,4 +1,4 @@
-"""Converte HTML em arvore nativa (port de LayoutEngine.kt)."""
+"""Converts HTML into a native tree (port of LayoutEngine.kt)."""
 from __future__ import annotations
 
 import math
@@ -11,9 +11,9 @@ from .css import CssDeclaration, _to_float
 from .html_parser import HtmlElement, HtmlNode, HtmlParser, HtmlText, MarkupError
 from .tree import (
     Align, AnimKind, Animation, Colors, Corners, Direction, Dock, FieldType, FontFamily,
-    Gradient, Justify, Length, LineHeightFixed, LineHeightMultiple, Native, NativeBox,
+    Gradient, ImageFit, ImagePos, Justify, Length, LineHeightFixed, LineHeightMultiple, Native, NativeBox,
     NativeButton, NativeCheckbox, NativeField, NativeImage, NativeItem, NativeList,
-    NativeStyle, NativeText, Sides, Span, StateStyle, StateStyles, TextAlign,
+    NativeStyle, NativeText, Position, Sides, Span, StateStyle, StateStyles, TextAlign,
     TextTransform, native_children,
 )
 
@@ -88,6 +88,15 @@ def _inherit(p: NativeStyle) -> NativeStyle:
         text_transform=p.text_transform, font_family=p.font_family)
 
 
+def _image_name_of(v: str) -> str | None:
+    """`url(name)`, with or without quotes: the name of an image. None when the text is not that."""
+    t = v.strip()
+    if not t.lower().startswith("url(") or not t.endswith(")"):
+        return None
+    name = t[4:-1].strip().strip("\"'").strip()
+    return name or None
+
+
 def _key_of(el: HtmlElement) -> str | None:
     v = el.attributes.get("key")
     if v is None:
@@ -141,7 +150,7 @@ class _LayoutBuilder:
         self.ids: dict[str, Native] = {}
         self.reserved_ids: set[str] = set()
 
-    # -- erros e avisos --------------------------------------------------
+    # -- errors and warnings --------------------------------------------------
     def _err(self, message: str, line: int, word: str | None = None, suggestion: str | None = None):
         return MarkupError(message, line, self.source, word, suggestion)
 
@@ -151,7 +160,7 @@ class _LayoutBuilder:
             self.warned.add(k)
             self.warnings.append(LayoutWarning(message, line))
 
-    # -- entrada ---------------------------------------------------------
+    # -- input ---------------------------------------------------------
     def build(self) -> LayoutResult:
         nodes = HtmlParser(self.html, self.start_line, self.source).parse()
         relevant = [n for n in nodes if not (isinstance(n, HtmlText) and _blank(n.text))]
@@ -180,7 +189,7 @@ class _LayoutBuilder:
                 seen.add(hint)
             self._assign_keys(f, f"{path}/{('~' + hint) if hint is not None else i}")
 
-    # -- variaveis e declaracoes ----------------------------------------
+    # -- variables and declarations ----------------------------------------
     def _substitute_variables(self, text: str, line: int) -> str:
         if "var(" not in text:
             return text
@@ -198,7 +207,7 @@ class _LayoutBuilder:
             return []
         return C.declarations(self._substitute_variables(s, el.line), el.line, self._warn)
 
-    # -- estilo ----------------------------------------------------------
+    # -- style ----------------------------------------------------------
     def _tag_defaults(self, el: HtmlElement, b: NativeStyle) -> NativeStyle:
         t = el.tag
         if t == "h1":
@@ -245,6 +254,21 @@ class _LayoutBuilder:
         if pressed is not None or disabled is not None or focused is not None:
             e = replace(e, states=StateStyles(pressed, disabled, focused))
         return e
+
+    def _fix_position(self, el: HtmlElement, s: NativeStyle, level: int) -> NativeStyle:
+        """`position: absolute` only makes sense inside a box of the flow: elsewhere it is ignored with a warning."""
+        if s.position != Position.ABSOLUTE:
+            return s
+        if el.tag in ("header", "footer", "dialog"):
+            why = f"<{el.tag}> has its own place"
+        elif el.tag == "li":
+            why = "<li> stays in its list"
+        elif level == 0:
+            why = "the root of the screen has no parent"
+        else:
+            return s
+        self._warn(f"CSS: 'position: absolute' is ignored: {why}", el.line)
+        return replace(s, position=Position.STATIC)
 
     def _state_of(self, el: HtmlElement, attribute: str, allow_opacity: bool) -> StateStyle | None:
         text = el.attributes.get(attribute)
@@ -456,11 +480,17 @@ class _LayoutBuilder:
         if name in ("background", "background-color", "background-image"):
             if vl.startswith("linear-gradient(") and vl.endswith(")"):
                 g = self._gradient_of(v)
-                return invalid() if g is None else replace(e, gradient=g)
+                return invalid() if g is None else replace(e, gradient=g, background_image=None)
+            image = _image_name_of(v)
+            if image is not None:
+                return replace(e, background_image=image)
             if name == "background-image":
-                return replace(e, gradient=None) if vl == "none" else invalid()
+                return replace(e, gradient=None, background_image=None) if vl == "none" else invalid()
             c = C.color(v)
-            return invalid() if c is None else replace(e, background_color=c, gradient=None)
+            if c is None:
+                return invalid()
+            return replace(e, background_color=c, gradient=None,
+                           background_image=None if name == "background" else e.background_image)
         if name == "font-size":
             l = ln()
             return replace(e, font_size=l) if l is not None and l.value > 0.0 else invalid()
@@ -667,6 +697,45 @@ class _LayoutBuilder:
                 return replace(e, justify=m[vl])
             return unsupported(f"CSS: 'justify-content: {vl}' is not supported (use flex-start, "
                                "center, flex-end, space-between, space-around or space-evenly)")
+        if name == "position":
+            if vl in ("static", "relative"):
+                return replace(e, position=Position.STATIC)
+            if vl == "absolute":
+                return replace(e, position=Position.ABSOLUTE)
+            return unsupported(f"CSS: 'position: {vl}' is not supported in v1 (use static, relative or absolute)")
+        if name in ("top", "right", "bottom", "left"):
+            if vl == "auto":
+                return replace(e, **{name: None})
+            l = ln()
+            return invalid() if l is None else replace(e, **{name: l})
+        if name == "z-index":
+            if vl == "auto":
+                return replace(e, z_index=0)
+            n = _int_or_none(vl)
+            return invalid() if n is None else replace(e, z_index=max(-1000, min(1000, n)))
+        if name == "background-size":
+            m = {"cover": ImageFit.COVER, "contain": ImageFit.CONTAIN,
+                 "100% 100%": ImageFit.FILL, "fill": ImageFit.FILL}
+            if vl in m:
+                return replace(e, background_size=m[vl])
+            return unsupported(f"CSS: 'background-size: {vl}' is not supported in v1 "
+                               "(use cover, contain or 100% 100%)")
+        if name == "background-position":
+            m = {"center": ImagePos.CENTER, "center center": ImagePos.CENTER,
+                 "top": ImagePos.TOP, "top center": ImagePos.TOP, "center top": ImagePos.TOP,
+                 "bottom": ImagePos.BOTTOM, "bottom center": ImagePos.BOTTOM, "center bottom": ImagePos.BOTTOM,
+                 "left": ImagePos.LEFT, "left center": ImagePos.LEFT, "center left": ImagePos.LEFT,
+                 "right": ImagePos.RIGHT, "right center": ImagePos.RIGHT, "center right": ImagePos.RIGHT}
+            if vl in m:
+                return replace(e, background_position=m[vl])
+            return unsupported(f"CSS: 'background-position: {vl}' is not supported in v1 "
+                               "(use center, top, bottom, left or right)")
+        if name == "object-fit":
+            m = {"cover": ImageFit.COVER, "contain": ImageFit.CONTAIN, "scale-down": ImageFit.CONTAIN,
+                 "fill": ImageFit.FILL}
+            if vl in m:
+                return replace(e, object_fit=m[vl])
+            return unsupported(f"CSS: 'object-fit: {vl}' is not supported in v1 (use cover, contain or fill)")
         if name == "dock":
             m = {"bottom": Dock.BOTTOM, "top": Dock.TOP, "left": Dock.LEFT,
                  "right": Dock.RIGHT, "center": Dock.CENTER}
@@ -691,7 +760,7 @@ class _LayoutBuilder:
                                "or slide-left, then an optional time like 200ms), ignored")
         return unsupported(f"CSS: property '{d.name}' is not supported in v1 and was ignored")
 
-    # -- texto -----------------------------------------------------------
+    # -- text -----------------------------------------------------------
     def _is_inline(self, el: HtmlElement) -> bool:
         return (el.tag == "span" and el.id is None and "class" not in el.attributes
                 and not any(isinstance(c, HtmlElement) and not self._is_inline(c) for c in el.children))
@@ -746,7 +815,7 @@ class _LayoutBuilder:
                     raise self._err(f"<{el.tag}> can only contain text", f.line, f"<{f.tag}")
         return "".join(s.text for s in self._normalize(run))
 
-    # -- filhos ----------------------------------------------------------
+    # -- children ----------------------------------------------------------
     def _convert_children(self, nodes: list[HtmlNode], parent_style: NativeStyle, owner: str) -> list[Native]:
         saved = self.parent_tag
         self.parent_tag = owner
@@ -796,14 +865,14 @@ class _LayoutBuilder:
         self.reserved_ids.add(i)
         return i
 
-    # -- elementos -------------------------------------------------------
+    # -- elements -------------------------------------------------------
     def _convert_element(self, el: HtmlElement, parent_style: NativeStyle) -> Native:
         tag = el.tag
         if tag not in _SUPPORTED_TAGS:
             raise self._err(f"tag '{tag}' is not supported", el.line, f"<{tag}", _TAGS_SUGGESTION)
         my_depth = self.depth
         my_parent = self.parent_tag
-        style = self._compute_style(el, parent_style)
+        style = self._fix_position(el, self._compute_style(el, parent_style), my_depth)
         id_ = self._register_id(el)
         classes = el.classes
         disabled = "disabled" in el.attributes or self.group_disabled
@@ -887,13 +956,17 @@ class _LayoutBuilder:
             for c in children:
                 if isinstance(c, NativeBox) and c.overlay:
                     raise self._err("<dialog> cannot be inside a 'virtual' container", c.line, "<dialog")
+                if c.style.position == Position.ABSOLUTE:
+                    raise self._err("'position: absolute' cannot be used inside a 'virtual' container", c.line)
         only = children[0] if len(children) == 1 else None
         is_group = tag in ("dialog", "fieldset", "header", "footer")
-        if not virtual and not is_group and isinstance(only, NativeText):
+        if (not virtual and not is_group and isinstance(only, NativeText)
+                and only.style.position != Position.ABSOLUTE):
             return NativeText(id=id_, classes=classes, style=style, line=line, spans=only.spans)
         return NativeBox(id=id_, classes=classes, style=style, line=line, children=children,
                          virtual=virtual, overlay=tag == "dialog", header=tag == "header",
-                         footer=tag == "footer")
+                         footer=tag == "footer",
+                         has_absolute=not virtual and any(c.style.position == Position.ABSOLUTE for c in children))
 
     def _convert_input(self, el, style, id_, classes, disabled) -> Native:
         type_ = (el.attributes.get("type") or "text").strip().lower()
@@ -918,7 +991,7 @@ class _LayoutBuilder:
             elif isinstance(f, HtmlElement):
                 if f.tag != "li":
                     raise self._err(f"<ul> can only contain <li>, found <{f.tag}>", f.line, f"<{f.tag}")
-                li_style = self._compute_style(f, style)
+                li_style = self._fix_position(f, self._compute_style(f, style), 2)
                 li_id = self._register_id(f)
                 item = NativeItem(id=li_id, classes=f.classes, style=li_style, line=f.line,
                                   marker="\u2022",
