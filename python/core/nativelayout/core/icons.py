@@ -1,4 +1,4 @@
-"""Icones embutidos (port de IconSet.kt). Grelha 24x24, traco 2, pontas redondas."""
+"""Built-in icons (port of IconSet.kt). 24x24 grid, stroke 2, round caps."""
 from __future__ import annotations
 from dataclasses import dataclass
 
