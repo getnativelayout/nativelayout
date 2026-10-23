@@ -11,9 +11,16 @@ Python port of the nativelayout core. It follows the Kotlin core feature for fea
 
 The Kivy hosts draw on a canvas; they do not build platform-native views.
 
-`nativelayout` is a namespace package (no `__init__.py` at its root): the core lives in
-`core/nativelayout/core` and each host brings `nativelayout/host`. Put `core` and the folder of the
-host on `sys.path`.
+## Install
+
+```
+pip install nativelayout            # core only (pure Python, no dependencies)
+pip install "nativelayout[kivy]"    # core + Kivy host
+```
+
+Requires Python 3.10 or newer. On Android, package with buildozer (`requirements = python3,kivy,nativelayout`).
+
+`nativelayout` is a namespace package (no `__init__.py` at its root): the core is `nativelayout.core` and the Kivy host is `nativelayout.host`. The package published on PyPI carries the Android host (`android/`), which includes the stencil mask that rounds `background-image` corners. To work from the repository instead, put `core` and the folder of the host on `sys.path`.
 
 ## Usage
 
@@ -31,7 +38,7 @@ def screen():
 run_app(file_loader("."), app=screen)
 ```
 
-Dependency: Kivy 2.x. On Android, package with buildozer (`requirements = python3,kivy`).
+The host needs Kivy 2.x.
 
 ## Tests
 
