@@ -1,0 +1,1 @@
+"""Tests of the host that need no Kivy (flex.py)."""
