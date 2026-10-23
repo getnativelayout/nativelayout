@@ -1,4 +1,4 @@
-"""Desenho com Kivy: cores, formas com cantos redondos, gradientes e icones."""
+"""Drawing with Kivy: colors, shapes with rounded corners, gradients and icons."""
 from __future__ import annotations
 
 import math
@@ -7,17 +7,17 @@ from kivy.graphics import Color, Ellipse, Line, Rectangle, RoundedRectangle
 from kivy.graphics.texture import Texture
 
 from nativelayout.core import icons as IconSet
-from nativelayout.core.tree import Corners, Length, NativeStyle
+from nativelayout.core.tree import Corners, ImageFit, ImagePos, Length, NativeStyle
 
 
 def rgba(c: int, opacity: float = 1.0) -> tuple[float, float, float, float]:
-    """Inteiro ARGB sem sinal -> (r, g, b, a) de 0 a 1."""
+    """Unsigned ARGB integer -> (r, g, b, a) from 0 to 1."""
     return (((c >> 16) & 255) / 255.0, ((c >> 8) & 255) / 255.0, (c & 255) / 255.0,
             ((c >> 24) & 255) / 255.0 * opacity)
 
 
 def radii_of(style: NativeStyle, px) -> list[float]:
-    """[top-left, top-right, bottom-right, bottom-left] em pixeis."""
+    """[top-left, top-right, bottom-right, bottom-left] in pixels."""
     c: Corners | None = style.corners
     if c is not None:
         return [px(c.top_left), px(c.top_right), px(c.bottom_right), px(c.bottom_left)]
@@ -29,18 +29,18 @@ _gradient_cache: dict = {}
 
 
 def gradient_texture(angle: int, colors: tuple[int, ...], size: int = 48) -> Texture:
-    """Textura pequena com o gradiente CSS (angulo em graus, 0 = para cima, 90 = para a direita)."""
+    """Small texture with the CSS gradient (angle in degrees, 0 = up, 90 = to the right)."""
     key = (angle, colors, size)
     tex = _gradient_cache.get(key)
     if tex is not None:
         return tex
     rad = math.radians(angle)
-    dx, dy = math.sin(rad), -math.cos(rad)          # direcao em coordenadas de ecra (y para baixo)
+    dx, dy = math.sin(rad), -math.cos(rad)          # direction in screen coordinates (y down)
     half = (abs(dx) + abs(dy)) / 2.0 or 1.0
     stops = [rgba(c) for c in colors]
     n = len(stops) - 1
     buf = bytearray()
-    for row in range(size):                         # a textura Kivy tem a origem em baixo
+    for row in range(size):                         # a Kivy texture has its origin at the bottom
         sy = (size - 1 - row) / (size - 1) - 0.5
         for col in range(size):
             sx = col / (size - 1) - 0.5
@@ -61,8 +61,9 @@ def gradient_texture(angle: int, colors: tuple[int, ...], size: int = 48) -> Tex
 
 
 def draw_box(canvas, x: float, y: float, w: float, h: float, style: NativeStyle, px,
-             background: int | None = None, border: int | None = None, opacity: float = 1.0) -> None:
-    """Fundo, gradiente, sombra e borda de uma caixa. (x, y) e o canto inferior esquerdo (Kivy)."""
+             background: int | None = None, border: int | None = None, opacity: float = 1.0,
+             image: Texture | None = None) -> None:
+    """Background, gradient, background image, shadow and border of a box. (x, y) is the bottom-left corner (Kivy)."""
     if w <= 0 or h <= 0:
         return
     radii = radii_of(style, px)
@@ -86,6 +87,8 @@ def draw_box(canvas, x: float, y: float, w: float, h: float, style: NativeStyle,
         if bg:
             canvas.add(Color(*rgba(bg, opacity)))
             canvas.add(RoundedRectangle(pos=(x, y), size=(w, h), radius=r))
+    if image is not None:
+        draw_image(canvas, image, x, y, w, h, style.background_size, style.background_position, r, opacity)
     bw = px(style.border_width)
     if bw > 0:
         bw = max(1.0, bw)
@@ -95,8 +98,60 @@ def draw_box(canvas, x: float, y: float, w: float, h: float, style: NativeStyle,
                                            *[max(v - inset, 0) for v in r]), width=bw))
 
 
+def _sub_tex_coords(tex: Texture, a0: float, a1: float, b0: float, b1: float) -> tuple:
+    """Texture coordinates of the part of `tex` between a0..a1 (left to right) and b0..b1 (bottom to top).
+
+    Uses the coordinates the texture already has, so it works whatever its orientation (loaded images are flipped).
+    """
+    u_bl, v_bl, u_br, v_br, u_tr, v_tr, u_tl, v_tl = tex.tex_coords
+
+    def at(a: float, b: float) -> tuple[float, float]:
+        u = u_bl * (1 - a) * (1 - b) + u_br * a * (1 - b) + u_tr * a * b + u_tl * (1 - a) * b
+        v = v_bl * (1 - a) * (1 - b) + v_br * a * (1 - b) + v_tr * a * b + v_tl * (1 - a) * b
+        return u, v
+
+    return (*at(a0, b0), *at(a1, b0), *at(a1, b1), *at(a0, b1))
+
+
+def draw_image(canvas, tex: Texture, x: float, y: float, w: float, h: float, fit: ImageFit,
+               pos: ImagePos = ImagePos.CENTER, radii: list[float] | None = None, opacity: float = 1.0) -> None:
+    """Draws `tex` in the box (x, y, w, h), (x, y) being the bottom-left corner.
+
+    COVER fills the box and cuts what does not fit, CONTAIN shows the whole image, FILL stretches it.
+    `pos` says which part stays in view (cover) or on which side the image sits (contain). It follows
+    the Android host (ImageBackground). COVER and FILL follow the rounded corners given in `radii`.
+    """
+    tw, th = tex.size
+    if tw <= 0 or th <= 0 or w <= 0 or h <= 0:
+        return
+    canvas.add(Color(1, 1, 1, opacity))
+    rounded = radii is not None and any(r > 0 for r in radii)
+
+    def box(coords, px_, py_, pw_, ph_, round_corners):
+        if round_corners:
+            canvas.add(RoundedRectangle(texture=tex, tex_coords=coords, pos=(px_, py_), size=(pw_, ph_), radius=radii))
+        else:
+            canvas.add(Rectangle(texture=tex, tex_coords=coords, pos=(px_, py_), size=(pw_, ph_)))
+
+    if fit == ImageFit.FILL:
+        box(_sub_tex_coords(tex, 0, 1, 0, 1), x, y, w, h, rounded)
+    elif fit == ImageFit.COVER:
+        scale = max(w / tw, h / th)
+        sw, sh = w / scale, h / scale                      # part of the image that stays in view, in image pixels
+        sx = 0.0 if pos == ImagePos.LEFT else (tw - sw) if pos == ImagePos.RIGHT else (tw - sw) / 2
+        sy = 0.0 if pos == ImagePos.TOP else (th - sh) if pos == ImagePos.BOTTOM else (th - sh) / 2   # from the top
+        coords = _sub_tex_coords(tex, sx / tw, (sx + sw) / tw, 1 - (sy + sh) / th, 1 - sy / th)
+        box(coords, x, y, w, h, rounded)
+    else:
+        scale = min(w / tw, h / th)
+        dw, dh = tw * scale, th * scale
+        dx = 0.0 if pos == ImagePos.LEFT else (w - dw) if pos == ImagePos.RIGHT else (w - dw) / 2
+        dy = 0.0 if pos == ImagePos.TOP else (h - dh) if pos == ImagePos.BOTTOM else (h - dh) / 2     # from the top
+        box(_sub_tex_coords(tex, 0, 1, 0, 1), x + dx, y + h - dy - dh, dw, dh, False)
+
+
 def draw_icon(canvas, name: str, x: float, y: float, size: float, color: int, opacity: float = 1.0) -> None:
-    """Desenha um icone embutido (grelha 24x24, traco 2, pontas redondas). (x, y) em baixo a esquerda."""
+    """Draws a built-in icon (24x24 grid, stroke 2, round caps). (x, y) is the bottom-left corner."""
     shapes = IconSet.shapes_of(name)
     if shapes is None:
         return
