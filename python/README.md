@@ -1,67 +1,76 @@
-# nativelayout (Python)
+# nativelayout
 
-Python port of the nativelayout core. It follows the Kotlin core feature for feature
-(currently v1.2.0: `<include>`, identity inside `for`, `<footer>` and `dock`,
-`position: absolute`, `background-image`, `object-fit`).
+**Create native interfaces from HTML, in any language.**
 
-- `core/`     pure Python, no Kivy: parser, expander, layout engine, differ, program side
-- `android/`  Kivy host for Android (`nativelayout/host`)
-- `desktop/`  Kivy host for the desktop (`nativelayout/host`)
-- `examples/` examples (`contador/`)
+A screen is written once, in a plain text file (`.nl`) that looks like HTML, with `{values}`, `if` / `for` lines and a `<style>`. This package is the Python implementation: a pure Python core (parser, expander, layout engine and differ) and a Kivy host that draws the screen.
 
-The Kivy hosts draw on a canvas; they do not build platform-native views.
+The same `.nl` file also runs on [Kotlin / Android](https://github.com/getnativelayout/nativelayout/tree/main/android) and in the [online editor](https://nativelayoutpad.vercel.app/).
 
 ## Install
 
 ```
-pip install nativelayout            # core only (pure Python, no dependencies)
+pip install nativelayout            # core only, pure Python, no dependencies
 pip install "nativelayout[kivy]"    # core + Kivy host
 ```
 
-Requires Python 3.10 or newer. On Android, package with buildozer (`requirements = python3,kivy,nativelayout`).
+Python 3.10 or newer. The host needs Kivy 2.x. On Android, package the app with buildozer (`requirements = python3,kivy,nativelayout`).
 
-`nativelayout` is a namespace package (no `__init__.py` at its root): the core is `nativelayout.core` and the Kivy host is `nativelayout.host`. The package published on PyPI carries the Android host (`android/`), which includes the stencil mask that rounds `background-image` corners. To work from the repository instead, put `core` and the folder of the host on `sys.path`.
+## Example
 
-## Usage
+`screen.nl`:
+
+```html
+<nativelayout>
+<style>
+body { padding: 16px; gap: 12px; }
+.mais { background-color: #2F81F7; color: white; border-radius: 20px; }
+</style>
+<body>
+<h1>Hello, {name}</h1>
+<p>Total: {n}</p>
+<button class="mais">+ add</button>
+</body>
+</nativelayout>
+```
+
+`main.py`:
 
 ```python
-import kivy  # noqa: F401  (Pydroid starts the Kivy window only if the opened file imports kivy)
+import kivy  # noqa: F401
 from nativelayout.core.program import state, view, click
 from nativelayout.host import run_app, file_loader
 
 def screen():
-    s = state({"n": 0})
-    if click(".more"):
+    s = state({"n": 0, "name": "world"})
+    if click(".mais"):
         s["n"] += 1
     return view("screen.nl", s)
 
 run_app(file_loader("."), app=screen)
 ```
 
-The host needs Kivy 2.x.
+The file describes the screen. The logic (state and taps) stays in your Python code, in a screen function.
 
-## Tests
+## What is in the package
 
-```
-cd python/core
-python -m unittest discover -s tests -t .
+- `nativelayout.core`: parser, expander, layout engine, differ and the program side (`state`, `view`, `click`, `go`, `value`, `save`, ...). Pure Python.
+- `nativelayout.host`: the Kivy host. It draws on a canvas; it does not build platform-native views.
 
-cd python/android
-python -m unittest discover -s tests -t .
-```
+`nativelayout` is a namespace package, so both parts install under the same name.
 
-The core tests mirror the Kotlin ones (`IncludeTest`, `FooterTest`, `AbsoluteTest`). The host tests
-cover `flex.py`, which does not need Kivy.
+## Supported
 
-## Status of the host (v1.2.0)
+Columns and rows, `flex`, `gap`, `justify`, `align`, wrap, `header`, `footer` and `dock`, dialogs, `<include>`, identity inside `for`, `position: absolute`, `background-image`, `object-fit`, built-in icons, gradients, shadows and rounded corners.
 
-Done: columns and rows, `flex`, `gap`, `justify`, `align`, wrap, header, footer and `dock`, dialogs,
-`position: absolute` (with `z-index`), `background-image` (`background-size`, `background-position`),
-`object-fit`, icons, gradients, shadows, rounded corners.
+Not done yet in the host: recycling in long lists, the slide animations (only the fade-in), `letter-spacing` and `overflow: hidden`.
 
-Not done yet:
-- `virtual` lists draw all items (no recycling)
-- animations: only the fade-in of the screen (slide-up and slide-left are missing)
-- `letter-spacing` and `overflow: hidden` (clipping) are not applied
-- the Android keyboard can cover fields (adjust `softinput_mode`)
-- the Kivy drawing of `background-image` and `object-fit` has not been tried on a device yet
+## Links
+
+- [Website](https://getnativelayout.github.io/nativelayout/)
+- [Specification](https://github.com/getnativelayout/nativelayout/blob/main/SPEC.md)
+- [Source and issues](https://github.com/getnativelayout/nativelayout)
+- [Online editor](https://nativelayoutpad.vercel.app/)
+
+## License
+
+Mozilla Public License 2.0. Copyright (c) 2026 Adilson C. Rafael.
