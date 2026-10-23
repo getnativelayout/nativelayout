@@ -25,9 +25,15 @@ jobs:
           python-version: ${{ matrix.python-version }}
 
       - name: Compile
-        working-directory: python/core
-        run: python -m compileall -q nativelayout
+        working-directory: python
+        run: |
+          python -m compileall -q core/nativelayout
+          python -m compileall -q android/nativelayout desktop/nativelayout
 
-      - name: Run tests
+      - name: Core tests
         working-directory: python/core
+        run: python -m unittest discover -s tests -t . -v
+
+      - name: Host tests (flex.py, no Kivy)
+        working-directory: python/android
         run: python -m unittest discover -s tests -t . -v
