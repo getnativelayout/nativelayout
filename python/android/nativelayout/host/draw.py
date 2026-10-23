@@ -3,7 +3,8 @@ from __future__ import annotations
 
 import math
 
-from kivy.graphics import Color, Ellipse, Line, Rectangle, RoundedRectangle
+from kivy.graphics import (Color, Ellipse, Line, Rectangle, RoundedRectangle, StencilPop, StencilPush,
+                           StencilUnUse, StencilUse)
 from kivy.graphics.texture import Texture
 
 from nativelayout.core import icons as IconSet
@@ -129,7 +130,16 @@ def draw_image(canvas, tex: Texture, x: float, y: float, w: float, h: float, fit
 
     def box(coords, px_, py_, pw_, ph_, round_corners):
         if round_corners:
-            canvas.add(RoundedRectangle(texture=tex, tex_coords=coords, pos=(px_, py_), size=(pw_, ph_), radius=radii))
+            # RoundedRectangle ignores a cut of the texture, so the image goes in a plain rectangle
+            # and a stencil mask with the rounded corners cuts it
+            canvas.add(StencilPush())
+            canvas.add(RoundedRectangle(pos=(px_, py_), size=(pw_, ph_), radius=radii))
+            canvas.add(StencilUse())
+            canvas.add(Color(1, 1, 1, opacity))
+            canvas.add(Rectangle(texture=tex, tex_coords=coords, pos=(px_, py_), size=(pw_, ph_)))
+            canvas.add(StencilUnUse())
+            canvas.add(RoundedRectangle(pos=(px_, py_), size=(pw_, ph_), radius=radii))
+            canvas.add(StencilPop())
         else:
             canvas.add(Rectangle(texture=tex, tex_coords=coords, pos=(px_, py_), size=(pw_, ph_)))
 
