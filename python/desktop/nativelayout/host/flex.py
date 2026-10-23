@@ -1,11 +1,12 @@
-"""Motor de layout flex em Python puro (sem Kivy), usado pelo host.
+"""Flex layout engine in pure Python (no Kivy), used by the host.
 
-Replica a semantica do host Android (LinearLayout + NLBox): colunas e linhas, `flex`, `gap`,
-`justify-content`, `align-items`/`align-self`, `flex-wrap`, margens, padding, min/max e percentagens.
+It follows the Android host (LinearLayout + NLBox): columns and rows, `flex`, `gap`,
+`justify-content`, `align-items`/`align-self`, `flex-wrap`, margins, padding, min/max and percentages.
+`position: absolute` nodes are placed apart, by `layout_absolute`.
 
-Cada `LNode` tem o estilo, os filhos e (se for folha) uma funcao `leaf(max_w) -> (w, h)` que mede
-o conteudo sem padding. Depois de `layout`, cada no tem `x, y, w, h` (caixa exterior, relativa a
-caixa do pai).
+Each `LNode` has the style, the children and (for a leaf) a function `leaf(max_w) -> (w, h)` that measures
+the content without padding. After `layout`, each node has `x, y, w, h` (outer box, relative to the
+box of its parent).
 """
 from __future__ import annotations
 
@@ -46,8 +47,8 @@ def _limits(n: LNode, m: Metrics):
 
 
 def layout(root: LNode, m: Metrics, width: float, height: float, fill_height: bool = True) -> None:
-    """Posiciona a arvore dentro de `width` x `height` (o viewport). A raiz ocupa a largura toda;
-    se o conteudo for mais baixo, estica ate ao viewport (como um ScrollView com fillViewport)."""
+    """Places the tree inside `width` x `height` (the viewport). The root takes the whole width;
+    if the content is shorter, it stretches to the viewport (like a ScrollView with fillViewport)."""
     s = root.style
     mg = s.margin
     ml, mr, mt, mb = m.px(mg.left), m.px(mg.right), m.px(mg.top), m.px(mg.bottom)
@@ -64,7 +65,7 @@ def layout(root: LNode, m: Metrics, width: float, height: float, fill_height: bo
 
 
 def _lay(n: LNode, m: Metrics, aw: float, ah: float, fw: float | None, fh: float | None):
-    """Mede e posiciona `n`. `aw/ah`: espaco maximo; `fw/fh`: tamanho exato imposto (ou None)."""
+    """Measures and places `n`. `aw/ah`: maximum space; `fw/fh`: exact size imposed (or None)."""
     st = n.style
     minw, maxw, minh, maxh = _limits(n, m)
     if fw is not None:
@@ -94,7 +95,7 @@ def _lay(n: LNode, m: Metrics, aw: float, ah: float, fw: float | None, fh: float
     gap = m.px(st.gap)
     wrapped = st.wrap and not vertical
 
-    # eixo principal (M) e cruzado (C), a partir de (largura, altura)
+    # main axis (M) and cross axis (C), from (width, height)
     def split(w, h):
         return (h, w) if vertical else (w, h)
 
@@ -120,7 +121,7 @@ def _lay(n: LNode, m: Metrics, aw: float, ah: float, fw: float | None, fh: float
         main_sz, cross_sz = (cs.height, cs.width) if vertical else (cs.width, cs.height)
         align = cs.align_self or st.align_items
         mb, ma, cb, ca = margins(c)
-        # cruzado
+        # cross axis
         cross_fixed = None
         cross_fill = False
         if isinstance(cross_sz, Dim):
@@ -135,7 +136,7 @@ def _lay(n: LNode, m: Metrics, aw: float, ah: float, fw: float | None, fh: float
         if cross_fill and inner_cross is not None:
             cross_fixed = max(inner_cross - cb - ca, 0.0)
             cross_fill = False
-        # principal
+        # main axis
         main_fixed = None
         if isinstance(main_sz, Dim):
             main_fixed = m.px(main_sz.length)
@@ -150,13 +151,13 @@ def _lay(n: LNode, m: Metrics, aw: float, ah: float, fw: float | None, fh: float
         return _lay(c, m, aw_, ah_, fw_, fh_)
 
     specs = [child_specs(c) for c in kids]
-    sizes: list[tuple[float, float]] = [(0.0, 0.0)] * len(kids)   # (main, cross) de cada filho
+    sizes: list[tuple[float, float]] = [(0.0, 0.0)] * len(kids)   # (main, cross) of each child
 
     if wrapped:
         return _lay_wrap(n, m, kids, specs, call, inner_aw, aw, ah, fw, fh, st, pl, pt, ph, pv, gap,
                          minw, maxw, minh, maxh)
 
-    # passo 1: filhos sem flex
+    # step 1: children without flex
     total_main = 0.0
     flex_sum = 0.0
     for i, c in enumerate(kids):
@@ -175,7 +176,7 @@ def _lay(n: LNode, m: Metrics, aw: float, ah: float, fw: float | None, fh: float
     gaps = gap * (count - 1) if count > 1 else 0.0
     total_main += gaps
 
-    # passo 2: filhos com flex (so crescem se o eixo principal do pai for exato)
+    # step 2: children with flex (they only grow if the main axis of the parent is exact)
     if flex_sum > 0:
         free = (inner_main - total_main) if inner_main is not None else 0.0
         free = max(free, 0.0)
@@ -189,13 +190,13 @@ def _lay(n: LNode, m: Metrics, aw: float, ah: float, fw: float | None, fh: float
             mn, cr = split(w, h)
             sizes[i] = (mn, cr)
             total_main += mn
-    # dimensao principal do pai
+    # main size of the parent
     content_main = total_main
     if inner_main is not None:
         main_size = inner_main
     else:
         main_size = min(content_main, avail_main) if avail_main != INF else content_main
-    # dimensao cruzada do pai
+    # cross size of the parent
     max_cross = 0.0
     for i in range(count):
         _, _, _, _, _, (mb, ma, cb, ca) = specs[i]
@@ -204,7 +205,7 @@ def _lay(n: LNode, m: Metrics, aw: float, ah: float, fw: float | None, fh: float
     if inner_cross is None and avail_cross != INF:
         cross_size = min(cross_size, avail_cross)
 
-    # filhos com cruzado "stretch" que ficaram mais estreitos que o pai: voltam a ser medidos
+    # children with a "stretch" cross axis that ended up narrower than the parent are measured again
     for i, c in enumerate(kids):
         main_fixed, cross_fixed, cross_fill, flex, align, (mb, ma, cb, ca) = specs[i]
         if cross_fill:
@@ -259,7 +260,7 @@ def _lay(n: LNode, m: Metrics, aw: float, ah: float, fw: float | None, fh: float
 
 def _lay_wrap(n, m, kids, specs, call, inner_aw, aw, ah, fw, fh, st, pl, pt, ph, pv, gap,
               minw, maxw, minh, maxh):
-    """Linha com `flex-wrap: wrap`: o flex nao cresce, cada filho mantem a sua largura."""
+    """A row with `flex-wrap: wrap`: flex does not grow, each child keeps its width."""
     avail = inner_aw if inner_aw != INF else INF
     lines: list[list[tuple[int, float, float]]] = [[]]
     line_w = 0.0
@@ -318,5 +319,47 @@ def _lay_wrap(n, m, kids, specs, call, inner_aw, aw, ah, fw, fh, st, pl, pt, ph,
 
 
 def lay_node(n: LNode, m: Metrics, aw: float, ah: float, fw: float | None, fh: float | None):
-    """Mede e posiciona um no com limites/tamanho exato dados (usado por cabecalho, rodape e camadas)."""
+    """Measures and places a node with the limits/exact size given (used by header, footer and layers)."""
     return _lay(n, m, aw, ah, fw, fh)
+
+
+def layout_absolute(n: LNode, m: Metrics, pw: float, ph: float) -> None:
+    """Places a `position: absolute` node inside a parent box of `pw` x `ph` (its outer box).
+
+    It follows the Android host (AbsFrame): `left/top/right/bottom` become offsets from the named edge,
+    added to the margin. With both `left` and `right` (or `top` and `bottom`) and no size it stretches.
+    With only `right` (or only `bottom`) it sits against that edge. The node takes no space in the flow.
+    After the call `n.x, n.y, n.w, n.h` are relative to the parent box.
+    """
+    s = n.style
+    left = m.px(s.left) if s.left is not None else None
+    right = m.px(s.right) if s.right is not None else None
+    top = m.px(s.top) if s.top is not None else None
+    bottom = m.px(s.bottom) if s.bottom is not None else None
+    mg = s.margin
+    ml, mr, mt, mb = m.px(mg.left), m.px(mg.right), m.px(mg.top), m.px(mg.bottom)
+
+    avail_w = max(pw - ml - mr - (left or 0.0) - (right or 0.0), 0.0)
+    avail_h = max(ph - mt - mb - (top or 0.0) - (bottom or 0.0), 0.0)
+
+    fw = None
+    if isinstance(s.width, Dim):
+        fw = m.px(s.width.length)
+    elif (isinstance(s.width, Percent) and s.width.value >= 100) or (left is not None and right is not None):
+        fw = avail_w
+    fh = None
+    if isinstance(s.height, Dim):
+        fh = m.px(s.height.length)
+    elif (isinstance(s.height, Percent) and s.height.value >= 100) or (top is not None and bottom is not None):
+        fh = avail_h
+
+    _lay(n, m, avail_w, avail_h, fw, fh)
+
+    if right is not None and left is None:
+        n.x = pw - mr - right - n.w
+    else:
+        n.x = ml + (left or 0.0)
+    if bottom is not None and top is None:
+        n.y = ph - mb - bottom - n.h
+    else:
+        n.y = mt + (top or 0.0)
