@@ -84,8 +84,16 @@ Want to add a language? See <a href="#contributing">Contributing</a>.
 
 ## Try it
 
+<p align="center"><a href="https://nativelayoutpad.vercel.app/"><strong>Open the online editor</strong></a></p>
+
+<p align="center">
+  <a href="https://nativelayoutpad.vercel.app/">
+    <img src="img/editor.jpg" alt="nativelayout online editor: code, data and live preview" width="100%">
+  </a>
+</p>
+
 <p align="justify">
-To try a screen without creating a project, install the editor app: download <code>nativelayout-debug.apk</code> from <a href="https://github.com/getnativelayout/nativelayout/releases">Releases</a>. It has the code, the data (JSON), a live preview and a file tree. Every push also builds it, see the Actions tab and <a href="CONTRIBUTING.md#11-continuous-integration">CONTRIBUTING.md, section 11</a>.
+To try a screen without creating a project, open the <a href="https://nativelayoutpad.vercel.app/">online editor</a>: code, data (JSON) and a live preview in your browser, with nothing to install. There is also an editor app for Android: download <code>nativelayout-debug.apk</code> from <a href="https://github.com/getnativelayout/nativelayout/releases">Releases</a>. Every push also builds it, see the Actions tab and <a href="CONTRIBUTING.md#11-continuous-integration">CONTRIBUTING.md, section 11</a>.
 </p>
 
 ## Test editor
