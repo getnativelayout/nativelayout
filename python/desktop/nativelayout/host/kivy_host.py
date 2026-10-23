@@ -1,4 +1,4 @@
-"""Host Kivy: aplica as mudancas da arvore nativa aos widgets e entrega os eventos ao programa."""
+"""Kivy host: applies the changes of the native tree to the widgets and hands the events to the program."""
 from __future__ import annotations
 
 import asyncio
@@ -21,15 +21,15 @@ from nativelayout.core.differ import (Create, Remove, Replace, SetItems, SetRoot
 from nativelayout.core.layout_host import BACK_EVENT_KEY, LayoutEvent, LayoutHost
 from nativelayout.core.tree import (Align, Dim, Direction, Dock, FieldType, Justify, Length, Native,
                                     NativeBox, NativeButton, NativeCheckbox, NativeField, NativeImage,
-                                    NativeItem, NativeList, NativeStyle, NativeText, Percent, Span,
-                                    native_children)
+                                    NativeItem, NativeList, NativeStyle, NativeText, Percent, Position,
+                                    Span, native_children)
 
 from . import draw, widgets
-from .flex import LNode, Metrics, lay_node, layout
+from .flex import LNode, Metrics, lay_node, layout, layout_absolute
 
 
 class Entry:
-    """Um no da arvore nativa com o seu widget."""
+    """A node of the native tree with its widget."""
 
     def __init__(self, host: "KivyLayoutHost", node: Native, parent: "Entry | None"):
         self.host = host
@@ -44,7 +44,7 @@ class Entry:
         self.inner: LNode | None = None
         self.marker_box = None
 
-    # ---- propriedades usadas pelos widgets
+    # ---- properties used by the widgets
     @property
     def is_layer(self) -> bool:
         return isinstance(self.node, NativeBox) and self.node.overlay
@@ -60,6 +60,11 @@ class Entry:
     @property
     def is_special(self) -> bool:
         return self.is_layer or self.is_header or self.is_footer
+
+    @property
+    def is_absolute(self) -> bool:
+        """`position: absolute`: out of the flow of its parent, placed by top/right/bottom/left."""
+        return self.style.position == Position.ABSOLUTE and not self.is_special
 
     @property
     def is_button(self) -> bool:
@@ -100,7 +105,7 @@ class Entry:
 
 
 class NLArea(RelativeLayout):
-    """O widget que o programa coloca no seu ecra: contem cabecalho, scroll, rodape e camadas."""
+    """The widget the program puts on its screen: it holds the header, the scroll, the footer and the layers."""
 
 
 class KivyLayoutHost(LayoutHost):
@@ -111,6 +116,7 @@ class KivyLayoutHost(LayoutHost):
         self._store: dict | None = None
 
         self.entries: dict[str, Entry] = {}
+        self._bg_cache: dict[str, object] = {}
         self.root: Entry | None = None
         self._structure_dirty = True
         self._scheduled = False
@@ -131,7 +137,7 @@ class KivyLayoutHost(LayoutHost):
             area.add_widget(w)
         area.bind(size=lambda *_: self.schedule_layout())
 
-    # ---------------------------------------------------------------- unidades
+    # ---------------------------------------------------------------- units
     @property
     def metrics(self) -> Metrics:
         d = dp(1)
@@ -151,7 +157,7 @@ class KivyLayoutHost(LayoutHost):
                 parent = self.entries.get(a.parent_key)
                 if parent is not None:
                     child = self._build(a.node, parent)
-                    parent.children.insert(min(a.position, len(parent.children)), child)
+                    self._insert(parent, child, a.position)
             elif isinstance(a, Remove):
                 self._remove(a.key)
             elif isinstance(a, Replace):
@@ -224,7 +230,7 @@ class KivyLayoutHost(LayoutHost):
         self.content.size = (self.area.width, max(label.height, self.area.height))
         label.pos = (0, self.content.height - label.height)
 
-    # ---- armazenamento (JSON no directorio de dados da app)
+    # ---- storage (JSON in the data folder of the app)
     def _path(self) -> str:
         if self._store_path:
             return self._store_path
@@ -291,7 +297,7 @@ class KivyLayoutHost(LayoutHost):
         else:
             self._queue.append(event)
 
-    # ---------------------------------------------------------------- modelo
+    # ---------------------------------------------------------------- model
     def _reset(self) -> None:
         self.entries.clear()
         self.root = None
@@ -386,6 +392,38 @@ class KivyLayoutHost(LayoutHost):
         if e.widget is not None:
             e.widget.redraw(self.px)
 
+    def _flow_lnodes(self, e: Entry, m: Metrics) -> list[LNode]:
+        """Layout nodes of the children in the flow. Absolute children get their own node but stay out of the list."""
+        out: list[LNode] = []
+        for c in e.children:
+            if c.is_special:
+                continue
+            ln = self._lnode(c, m)
+            if not c.is_absolute:
+                out.append(ln)
+        return out
+
+    def background_texture(self, e: Entry):
+        """Texture of `background-image` for an entry, or None (not set, or the image is not found)."""
+        name = e.style.background_image
+        if not name:
+            return None
+        if name not in self._bg_cache:
+            self._bg_cache[name] = self._load_texture(name)
+        return self._bg_cache[name]
+
+    def _insert(self, parent: Entry, child: Entry, position: int) -> None:
+        """Inserts a created child. `position` counts only the siblings of the same kind (absolute or in the flow)."""
+        kind = child.is_absolute
+        seen = 0
+        for i, c in enumerate(parent.children):
+            if c.is_absolute == kind:
+                if seen == position:
+                    parent.children.insert(i, child)
+                    return
+                seen += 1
+        parent.children.append(child)
+
     def _lnode(self, e: Entry, m: Metrics) -> LNode:
         n = e.node
         px = m.px
@@ -417,21 +455,21 @@ class KivyLayoutHost(LayoutHost):
                 widgets.escape_markup(n.marker + " "), e.style, px, None))
             content_style = NativeStyle(direction=st.direction, justify=st.justify, align_items=st.align_items,
                                         gap=st.gap, flex=1.0)
-            inner = LNode(content_style, [self._lnode(c, m) for c in e.children if not c.is_special])
+            inner = LNode(content_style, self._flow_lnodes(e, m))
             row_style = replace(st, direction=Direction.ROW, justify=Justify.START, align_items=Align.START,
                                 gap=Length.ZERO, wrap=False)
             l = LNode(row_style, [marker, inner], key=n.key)
             e.lnode, e.inner, e.marker_box = l, inner, marker
             return l
         else:
-            l = LNode(st, [self._lnode(c, m) for c in e.children if not c.is_special], key=n.key)
+            l = LNode(st, self._flow_lnodes(e, m), key=n.key)
         e.lnode = l
         e.inner = l
         e.marker_box = None
         return l
 
     def _place(self, e: Entry, ox: float, oy: float, region_h: float, regions: list, px) -> None:
-        """Poe os widgets (coordenadas Kivy, origem em baixo) a partir das posicoes do motor."""
+        """Sets the widgets (Kivy coordinates, origin at the bottom) from the positions of the engine."""
         l = e.lnode
         x, y = ox + l.x, oy + l.y
         w = e.widget
@@ -445,9 +483,20 @@ class KivyLayoutHost(LayoutHost):
         cx, cy = x, y
         if inner is not None and inner is not l:
             cx, cy = x + inner.x, y + inner.y
+        # absolute children: below the flow when z-index is negative, above it otherwise
+        absolutes = sorted((c for c in e.children if c.is_absolute), key=lambda c: c.style.z_index)
+        metrics = self.metrics
+        for c in absolutes:
+            layout_absolute(c.lnode, metrics, l.w, l.h)
+        for c in absolutes:
+            if c.style.z_index < 0:
+                self._place(c, x, y, region_h, regions, px)
         for c in e.children:
-            if not c.is_special:
+            if not c.is_special and not c.is_absolute:
                 self._place(c, cx, cy, region_h, regions, px)
+        for c in absolutes:
+            if c.style.z_index >= 0:
+                self._place(c, x, y, region_h, regions, px)
 
     def _run_layout(self, *_):
         self._scheduled = False
@@ -464,7 +513,7 @@ class KivyLayoutHost(LayoutHost):
                 out += sub(c)
             return out
 
-        # reiniciar marcadores dos itens antes de os recalcular
+        # reset the markers of the items before they are computed again
         header = next((c for c in root.children if c.is_header), None)
         footers = [c for c in root.children if c.is_footer]
         layers = [c for c in root.children if c.is_layer]
@@ -475,7 +524,7 @@ class KivyLayoutHost(LayoutHost):
         for c in footers + layers:
             self._lnode(c, m)
 
-        # cabecalho: fixo por cima do scroll
+        # header: fixed above the scroll
         header_h = 0.0
         header_regions: list[Entry] = []
         if header is not None:
@@ -487,7 +536,7 @@ class KivyLayoutHost(LayoutHost):
             header_h = header.lnode.h + mt + mb
             self._place(header, 0, 0, header_h, header_regions, px)
 
-        # rodapes com dock bottom: sob o scroll
+        # footers with dock bottom: under the scroll
         bottom_footers = [f for f in footers if (f.style.dock or Dock.BOTTOM) == Dock.BOTTOM]
         float_footers = [f for f in footers if f not in bottom_footers]
         footer_h = 0.0
@@ -502,14 +551,14 @@ class KivyLayoutHost(LayoutHost):
         for f in bottom_footers:
             self._place(f, 0, 0, footer_h, footer_regions, px)
 
-        # corpo
+        # body
         viewport_h = max(H - header_h - footer_h, 0.0)
         layout(root.lnode, m, W, viewport_h)
         content_h = max(root.lnode.y + root.lnode.h + px(root.style.margin.bottom), viewport_h)
         body_regions: list[Entry] = []
         self._place(root, 0, 0, content_h, body_regions, px)
 
-        # rodapes flutuantes e camadas (dialogs)
+        # floating footers and layers (dialogs)
         float_regions: list[Entry] = []
         for f in float_footers:
             self._layout_floating(f, W, H, m, float_regions, px)
@@ -519,7 +568,7 @@ class KivyLayoutHost(LayoutHost):
             lyr.lnode.x = lyr.lnode.y = 0.0
             self._place(lyr, 0, 0, H, overlay_regions, px)
 
-        # regioes
+        # regions
         self.scroll.size = (W, viewport_h)
         self.scroll.pos = (0, footer_h)
         self.content.size = (W, content_h)
