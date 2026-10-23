@@ -1,4 +1,4 @@
-"""Widgets Kivy do host. Todos desenham o seu proprio fundo; a posicao vem do motor flex."""
+"""Kivy widgets of the host. Each draws its own background; the position comes from the flex engine."""
 from __future__ import annotations
 
 from kivy.core.text.markup import MarkupLabel as CoreLabel
@@ -10,10 +10,11 @@ from kivy.utils import escape_markup
 
 from nativelayout.core.tree import (Align, Direction, FontFamily, Justify, LineHeightFixed,
                                     LineHeightMultiple, NativeStyle, Span, TextAlign)
+from nativelayout.core.tree import ImagePos
 
 from . import draw
 
-TAP_SLOP = 12.0   # pixeis de movimento a partir dos quais um toque deixa de ser um clique
+TAP_SLOP = 12.0   # pixels of movement after which a touch is no longer a click
 
 
 def _font_name(f: FontFamily) -> str | None:
@@ -23,7 +24,7 @@ def _font_name(f: FontFamily) -> str | None:
     return None
 
 
-# ---------------------------------------------------------------- texto
+# ---------------------------------------------------------------- text
 def markup_of(spans: list[Span], px) -> str:
     out = []
     for s in spans:
@@ -66,7 +67,7 @@ def make_label(markup: str, style: NativeStyle, px, max_w: float | None, halign:
 
 
 def measure_text(markup: str, style: NativeStyle, px, max_w: float | None) -> tuple[float, float]:
-    """Tamanho natural do texto; se nao couber em `max_w`, quebra linhas e devolve a linha mais larga."""
+    """Natural size of the text; if it does not fit in `max_w`, it wraps and returns the widest line."""
     if not markup:
         return 0.0, px(style.font_size) * 1.2
     key = (markup, style.font_size, style.bold, style.italic, style.font_family, style.line_height,
@@ -88,7 +89,7 @@ def measure_text(markup: str, style: NativeStyle, px, max_w: float | None) -> tu
 
 
 def text_gravity(style: NativeStyle, is_button: bool) -> tuple[str, str]:
-    """(horizontal, vertical) = ('left'|'center'|'right', 'top'|'center'|'bottom'), como o host Android."""
+    """(horizontal, vertical) = ('left'|'center'|'right', 'top'|'center'|'bottom'), like the Android host."""
     if is_button:
         h = {"CENTER": "center", "END": "right"}.get(style.text_align.name, "left")
         return h, "center"
@@ -106,7 +107,7 @@ def text_gravity(style: NativeStyle, is_button: bool) -> tuple[str, str]:
 
 # ---------------------------------------------------------------- base
 class NLWidget(Widget):
-    """Widget com fundo desenhado por nos. `entry` liga-o ao modelo do host."""
+    """A widget whose background we draw. `entry` links it to the model of the host."""
 
     def __init__(self, entry, **kw):
         super().__init__(size_hint=(None, None), **kw)
@@ -115,7 +116,7 @@ class NLWidget(Widget):
         self._touch_start = None
         self._moved = False
 
-    # desenho: subclasses acrescentam por cima do fundo
+    # drawing: subclasses add on top of the background
     def redraw(self, px) -> None:
         e = self.entry
         st = e.style
@@ -132,14 +133,15 @@ class NLWidget(Widget):
         elif getattr(self, "focused", False) and states and states.focused:
             bg = states.focused.background_color
             border = states.focused.border_color
-        draw.draw_box(self.canvas.before, self.x, self.y, self.width, self.height, st, px, bg, border)
+        draw.draw_box(self.canvas.before, self.x, self.y, self.width, self.height, st, px, bg, border,
+                      image=e.host.background_texture(e))
         self.draw_content(px)
         self.opacity = e.effective_opacity()
 
     def draw_content(self, px) -> None:
         pass
 
-    # toques
+    # touches
     def wants_touch(self) -> bool:
         return self.entry.interactive() and not self.entry.is_disabled()
 
@@ -206,7 +208,7 @@ class NLBoxWidget(NLWidget):
 
 
 class NLTextWidget(NLWidget):
-    """Texto (e botoes): desenha o texto dentro da area de conteudo, com a gravidade do estilo."""
+    """Text (and buttons): draws the text inside the content area, with the gravity of the style."""
 
     def draw_content(self, px) -> None:
         e = self.entry
@@ -288,16 +290,12 @@ class NLImageWidget(NLWidget):
             self.canvas.add(Color(*draw.rgba(0xFFDDDDDD)))
             self.canvas.add(Rectangle(pos=self.pos, size=self.size))
             return
-        tw, th = tex.size
-        k = min(self.width / tw, self.height / th) if tw and th else 1.0
-        w, h = tw * k, th * k
-        self.canvas.add(Color(1, 1, 1, 1))
-        self.canvas.add(Rectangle(texture=tex, pos=(self.x + (self.width - w) / 2, self.y + (self.height - h) / 2),
-                                  size=(w, h)))
+        # object-fit: contain (default), cover or fill; the image is always centered
+        draw.draw_image(self.canvas, tex, self.x, self.y, self.width, self.height, st.object_fit, ImagePos.CENTER)
 
 
 class NLFieldWidget(TextInput):
-    """Campo de texto: o fundo e a borda sao desenhados por nos; o TextInput so mostra o texto."""
+    """Text field: we draw the background and the border; the TextInput only shows the text."""
 
     def __init__(self, entry, **kw):
         super().__init__(size_hint=(None, None), background_normal="", background_active="",
@@ -321,7 +319,8 @@ class NLFieldWidget(TextInput):
             bg, border = states.disabled.background_color, states.disabled.border_color
         elif self.focused and states and states.focused:
             bg, border = states.focused.background_color, states.focused.border_color
-        draw.draw_box(self.canvas.before, self.x, self.y, self.width, self.height, st, px, bg, border)
+        draw.draw_box(self.canvas.before, self.x, self.y, self.width, self.height, st, px, bg, border,
+                      image=e.host.background_texture(e))
         pad = [px(st.padding.left), px(st.padding.top), px(st.padding.right), px(st.padding.bottom)]
         self.padding = pad
         self.font_size = max(1, int(round(px(st.font_size))))
