@@ -1,4 +1,4 @@
-"""NativeView para Kivy (Android e desktop): o widget do ecra e o programa que o controla."""
+"""NativeView for Kivy (Android and desktop): the widget of the screen and the program that drives it."""
 from __future__ import annotations
 
 import asyncio
@@ -10,7 +10,7 @@ from .kivy_host import KivyLayoutHost, NLArea
 
 
 def system_is_dark() -> bool:
-    """Tema escuro do sistema (so no Android; no desktop devolve False)."""
+    """Dark theme of the system (Android only; on the desktop it returns False)."""
     try:
         from jnius import autoclass
         activity = autoclass("org.kivy.android.PythonActivity").mActivity
@@ -21,7 +21,7 @@ def system_is_dark() -> bool:
 
 
 def file_loader(base_dir: str):
-    """`loader(nome) -> texto | None` que le ficheiros de uma pasta (sem sair dela)."""
+    """`loader(name) -> text | None` that reads files of a folder (without leaving it)."""
     base = os.path.abspath(base_dir)
 
     def load(name: str) -> str | None:
@@ -34,10 +34,10 @@ def file_loader(base_dir: str):
 
 
 class NativeView(NativeViewBase):
-    """`NativeView(loader, app=ecra_inicial)` ou `NativeView(loader, body=async_def_corpo)`.
+    """`NativeView(loader, app=first_screen)` or `NativeView(loader, body=async_def_body)`.
 
-    `ui.widget` e o widget Kivy para pôr na janela. `ui.start()` arranca o programa (precisa do
-    loop asyncio do Kivy: `App.async_run`). O botao voltar do Android chama `press_back()`.
+    `ui.widget` is the Kivy widget to put in the window. `ui.start()` starts the program (it needs the
+    asyncio loop of Kivy: `App.async_run`). The Android back button calls `press_back()`.
     """
 
     def __init__(self, loader, app=None, body=None, dark=None, image_resolver=None, store_path=None):
@@ -54,7 +54,7 @@ class NativeView(NativeViewBase):
         self._task = asyncio.ensure_future(self.run())
 
     def _on_keyboard(self, _window, key, *_args) -> bool:
-        if key == 27:           # botao voltar do Android (Esc no desktop)
+        if key == 27:           # Android back button (Esc on the desktop)
             self.press_back()
             return True
         return False
@@ -68,7 +68,7 @@ class NativeView(NativeViewBase):
 
 
 def run_app(loader, app=None, body=None, title: str = "nativelayout", **options) -> None:
-    """Abre uma janela Kivy com o programa. Atalho para scripts e exemplos."""
+    """Opens a Kivy window with the program. A shortcut for scripts and examples."""
     from kivy.app import App
 
     class _App(App):
