@@ -88,7 +88,7 @@ Want to add a language? See <a href="#contributing">Contributing</a>.
 
 <p align="center">
   <a href="https://nativelayoutpad.vercel.app/">
-    <img src="img/editor.jpg" alt="nativelayout online editor: code, data and live preview" width="100%">
+    <img src="img/ed.jpg" alt="nativelayout online editor: code, data and live preview" width="100%">
   </a>
 </p>
 
