@@ -2,7 +2,9 @@
 
 **Describe a screen in HTML-like text and get a native interface.**
 
-nativelayout is a declarative language for user interfaces. You write a screen once, in a plain text file (`.nl`) that looks like HTML, and each programming language shows it with its own host. There is no WebView.
+nativelayout is a declarative language for user interfaces. 
+
+You write a screen once, in a plain text file (`.nl`) that looks like HTML, and each programming language shows it with its own host. There is no WebView.
 
 A `.nl` file has:
 
