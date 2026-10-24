@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "nativelayout"
-version = "1.2.2"
+version = "1.2.3"
 description = "Create native interfaces from HTML, in any language. Python core and Kivy host."
 readme = "README.md"
 requires-python = ">=3.10"
@@ -35,11 +35,12 @@ Source = "https://github.com/getnativelayout/nativelayout"
 Issues = "https://github.com/getnativelayout/nativelayout/issues"
 Specification = "https://github.com/getnativelayout/nativelayout/blob/main/SPEC.md"
 
-# `nativelayout` is a namespace package (no __init__.py at its root).
 # The core and the host live in separate folders of the repository, so they are mapped here.
+# `nativelayout/__init__.py` joins them with pkgutil.extend_path when they are used from the repository.
 [tool.setuptools]
-packages = ["nativelayout.core", "nativelayout.host"]
+packages = ["nativelayout", "nativelayout.core", "nativelayout.host"]
 
 [tool.setuptools.package-dir]
+"nativelayout" = "core/nativelayout"
 "nativelayout.core" = "core/nativelayout/core"
 "nativelayout.host" = "android/nativelayout/host"
