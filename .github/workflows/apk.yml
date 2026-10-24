@@ -6,19 +6,39 @@ on:
 
 jobs:
   build:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
 
-      - name: Build the APK of the Despesas example
-        uses: ArtemSBulgakov/buildozer-action@v1
-        id: buildozer
+      - uses: actions/setup-python@v5
         with:
-          command: buildozer android debug
-          workdir: python/examples/despesas
+          python-version: "3.11"
+
+      - name: System packages
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            git zip unzip openjdk-17-jdk autoconf automake libtool libltdl-dev \
+            pkg-config zlib1g-dev libncurses5-dev libncursesw5-dev libtinfo6 \
+            cmake libffi-dev libssl-dev build-essential ccache
+
+      - name: Buildozer
+        run: pip install --upgrade buildozer "cython<3" virtualenv
+
+      - name: Cache the Android tools
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.buildozer
+            python/examples/despesas/.buildozer
+          key: buildozer-${{ hashFiles('python/examples/despesas/buildozer.spec') }}
+
+      - name: Build the APK of the Despesas example
+        working-directory: python/examples/despesas
+        run: buildozer -v android debug
 
       - name: Upload the APK
         uses: actions/upload-artifact@v4
         with:
           name: despesas-apk
-          path: ${{ steps.buildozer.outputs.filename }}
+          path: python/examples/despesas/bin/*.apk
