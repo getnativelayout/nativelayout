@@ -43,16 +43,16 @@ fun NativeView.PanelScreen(): Page {
 }
 ```
 
-Python (illustrative, not built yet):
+Python (`import nativelayout as nl`):
 
 ```python
 def panel_screen():
-    s = state({"pending": 0})
+    s = nl.state({"pending": 0})
 
-    if click("add"):
+    if nl.click("add"):
         s["pending"] += 1
 
-    return view("panel.nl", s)
+    return nl.view("panel.nl", s)
 ```
 
 Going to another screen:
@@ -71,6 +71,8 @@ fun NativeView.LoginScreen(): Page {
 ```
 
 ### 8.2 Verbs
+
+In Python the verbs are used as `nl.state`, `nl.click`, ... after `import nativelayout as nl`; the column "Python style" gives the name.
 
 | Verb | Python style | Does |
 |---|---|---|
@@ -193,16 +195,20 @@ class MainActivity : Activity() {
 }
 ```
 
-Python (illustrative, not built yet):
+Python (`run_app` with a `body`; `render` is a coroutine because the Kivy loop is asynchronous):
 
 ```python
-with NativeView(app) as ui:
-    panel = screen("panel.nl")
+from nativelayout.host import run_app
+
+async def body(ui):
+    panel = ui.screen("panel.nl")
     pending = 0
 
-    while ui.render(panel, {"pending": pending}):
+    while await ui.render(panel, {"pending": pending}):
         if ui.click("add"):
             pending += 1
+
+run_app(".", body=body)
 ```
 
 ### 8.6 Going back and the back button
