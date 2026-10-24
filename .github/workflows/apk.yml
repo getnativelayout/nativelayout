@@ -1,0 +1,24 @@
+name: apk
+
+# Run by hand: Actions > apk > Run workflow. A first build takes 20 to 40 minutes.
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build the APK of the Despesas example
+        uses: ArtemSBulgakov/buildozer-action@v1
+        id: buildozer
+        with:
+          command: buildozer android debug
+          workdir: python/examples/despesas
+
+      - name: Upload the APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: despesas-apk
+          path: ${{ steps.buildozer.outputs.filename }}
