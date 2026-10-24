@@ -1,0 +1,96 @@
+:root {
+    --bg: #eeeee8;
+    --surface: #f6f6f0;
+    --text: #1c1e15;
+    --muted: #6b6d5e;
+    --line: #bdbdb5;
+    --field: #ece9dc;
+    --field-line: #c4c7ad;
+    --soft: #e3e3d7;
+    --accent: #455a0a;
+    --accent-press: #33440a;
+    --on-accent: #ffffff;
+    --danger: #b3261e;
+    --danger-press: #8c1d18;
+    --on-danger: #ffffff;
+    --track: #d9dacb;
+}
+
+@media (prefers-color-scheme: dark) {
+    :root {
+        --bg: #14160f;
+        --surface: #1d2016;
+        --text: #ecede3;
+        --muted: #9a9d8a;
+        --line: #3a3e2d;
+        --field: #232619;
+        --field-line: #4a4f36;
+        --soft: #2a2e1f;
+        --accent: #a8ce46;
+        --accent-press: #8fb335;
+        --on-accent: #172004;
+        --danger: #ff8a80;
+        --danger-press: #e57373;
+        --on-danger: #410002;
+        --track: #2d3122;
+    }
+}
+
+body { background: var(--bg); color: var(--text); padding: 0; }
+.page { padding: 20px; }
+.lead { margin-bottom: 16px; }
+
+h1 { font-size: 2rem; font-weight: 700; }
+h2 { font-size: 2rem; font-weight: 700; }
+h3 { font-size: 1.1rem; font-weight: 700; margin-top: 20px; margin-bottom: 8px; }
+.muted { color: var(--muted); font-size: 0.9rem; }
+.error { color: var(--danger); font-size: 0.9rem; margin-top: 10px; }
+.center { text-align: center; }
+
+header { display: flex; flex-direction: row; align-items: center; gap: 8px; padding: 24px 20px 8px 20px; background: var(--bg); }
+.apptitle { flex: 1; font-size: 2rem; font-weight: 700; margin: 0; }
+
+.ibtn { color: var(--text); padding: 8px; }
+.ibtn:pressed { color: var(--accent); }
+#remove, .remove { color: var(--danger); }
+
+.who { display: flex; flex-direction: row; align-items: center; gap: 8px; margin-bottom: 16px; }
+.whotext { color: var(--muted); font-size: 0.9rem; margin: 0; }
+
+.card { background: var(--surface); border: 1px solid var(--line); border-radius: 24px; padding: 16px; margin-bottom: 16px; }
+
+fieldset { border: 1px solid var(--line); border-radius: 28px; padding: 20px; margin-bottom: 16px; }
+legend { color: var(--accent); font-weight: 700; }
+input { color: var(--text); background: var(--field); border: 1px solid var(--field-line); border-radius: 24px; padding: 16px 18px; margin-top: 12px; }
+input:focus { border-color: var(--accent); }
+
+.primary { background: var(--accent); color: var(--on-accent); border-radius: 28px; padding: 16px; font-weight: 700; margin-bottom: 12px; }
+.primary:pressed { background: var(--accent-press); }
+.ghost { background: var(--soft); color: var(--text); border-radius: 20px; padding: 8px 14px; font-weight: 700; }
+.ghost:pressed { background: var(--line); }
+.danger { background: var(--danger); color: var(--on-danger); font-weight: 700; }
+.danger:pressed { background: var(--danger-press); }
+
+.chips { display: flex; flex-direction: row; flex-wrap: wrap; gap: 8px; margin-top: 8px; margin-bottom: 8px; }
+.chip { background: var(--soft); color: var(--text); border-radius: 24px; padding: 10px 16px; font-weight: 600; }
+.on { background: var(--accent); color: var(--on-accent); }
+
+.row { display: flex; flex-direction: row; align-items: center; gap: 12px; background: var(--surface); border: 1px solid var(--line); border-radius: 20px; padding: 12px 14px; margin-bottom: 10px; }
+.grow { flex: 1; }
+.title { font-weight: 600; }
+.amount { font-weight: 700; }
+
+.cat { margin-bottom: 12px; }
+.split { display: flex; flex-direction: row; justify-content: space-between; }
+.track { background: var(--track); border-radius: 6px; height: 8px; margin-top: 6px; }
+.fill { background: var(--accent); border-radius: 6px; height: 8px; }
+.empty { color: var(--muted); text-align: center; padding: 24px; }
+
+/* screens fade in by default; the confirmation sheet rises */
+dialog { animation: slide-up 200ms; }
+
+.sheet { background: var(--surface); border-radius: 28px 28px 0 0; padding: 24px 24px 28px 24px; gap: 8px; }
+.sheet-title { font-size: 1.3rem; font-weight: 700; margin: 0; }
+.sheetmsg { color: var(--muted); margin: 0; }
+.actions { display: flex; flex-direction: row; gap: 12px; margin-top: 12px; }
+.dlg { flex: 1; padding: 14px; border-radius: 24px; }
