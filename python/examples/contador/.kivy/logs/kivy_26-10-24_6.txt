@@ -1,0 +1,10 @@
+[INFO   ] Logger: Record log in /storage/emulated/0/NativeLayout/Python/nativelayout-python-nl/python/examples/contador/.kivy/logs/kivy_26-10-24_6.txt
+[INFO   ] Kivy: v2.3.1
+[INFO   ] Kivy: Installed at "/data/user/0/ru.iiec.pydroid3/files/aarch64-linux-android/lib/python3.13/site-packages/kivy/__init__.py"
+[INFO   ] Python: v3.13.13 (main, May 12 2026, 00:20:28) [GCC 11.4.0]
+[INFO   ] Python: Interpreter at "/data/user/0/ru.iiec.pydroid3/files/aarch64-linux-android/bin/python3"
+[INFO   ] Logger: Purge log fired. Processing...
+[INFO   ] Logger: Purge finished!
+[WARNING] stderr: Traceback (most recent call last):
+[WARNING] stderr:   File "/storage/emulated/0/NativeLayout/Python/nativelayout-python-nl/python/examples/contador/main.py", line 17, in <module>
+[WARNING] stderr: AttributeError: module 'nativelayout' has no attribute 'run'
