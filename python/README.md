@@ -1,10 +1,21 @@
 # nativelayout
 
-**Create native interfaces from HTML, in any language.**
+**Describe a screen in HTML-like text and get a native interface.**
 
-A screen is written once, in a plain text file (`.nl`) that looks like HTML, with `{values}`, `if` / `for` lines and a `<style>`. This package is the Python implementation: a pure Python core (parser, expander, layout engine and differ) and a Kivy host that draws the screen.
+nativelayout is a declarative language for user interfaces. You write a screen once, in a plain text file (`.nl`) that looks like HTML, and each programming language shows it with its own host. There is no WebView.
 
-The same `.nl` file also runs on [Kotlin / Android](https://github.com/getnativelayout/nativelayout/tree/main/android) and in the [online editor](https://nativelayoutpad.vercel.app/).
+A `.nl` file has:
+
+- HTML tags you already know (`div`, `p`, `button`, `input`, `img`, ...);
+- `{values}` that your code fills in;
+- `if` and `for` lines, for conditions and repetition;
+- a `<style>` with simple CSS selectors.
+
+The file only describes the screen. The logic (state and taps) stays in your own code, in a screen function.
+
+nativelayout is a specification with implementations: [Kotlin for Android](https://github.com/getnativelayout/nativelayout/tree/main/android), Python (this package) and JavaScript (used by the [online editor](https://nativelayoutpad.vercel.app/)). The same `.nl` file works unchanged in all of them.
+
+**This package** is the Python implementation: a pure Python core (parser, expander, layout engine and differ) and a Kivy host that draws the screen.
 
 ## Install
 
@@ -37,8 +48,7 @@ body { padding: 16px; gap: 12px; }
 
 ```python
 import kivy  # noqa: F401
-from nativelayout.core import state, view, click
-from nativelayout.host import run_app, file_loader
+from nativelayout import state, view, click, run_app, file_loader
 
 def screen():
     s = state({"n": 0, "name": "world"})
@@ -56,13 +66,7 @@ The file describes the screen. The logic (state and taps) stays in your Python c
 - `nativelayout.core`: parser, expander, layout engine, differ and the program side (`state`, `view`, `click`, `go`, `value`, `save`, ...). Pure Python.
 - `nativelayout.host`: the Kivy host. It draws on a canvas; it does not build platform-native views.
 
-`nativelayout` is a namespace package, so both parts install under the same name.
-
-## Supported
-
-Columns and rows, `flex`, `gap`, `justify`, `align`, wrap, `header`, `footer` and `dock`, dialogs, `<include>`, identity inside `for`, `position: absolute`, `background-image`, `object-fit`, built-in icons, gradients, shadows and rounded corners.
-
-Not done yet in the host: recycling in long lists, the slide animations (only the fade-in), `letter-spacing` and `overflow: hidden`.
+Everything is also available from the top level: `from nativelayout import state, view, click, run_app, file_loader`. The Kivy host is loaded only when you use it.
 
 ## Links
 
