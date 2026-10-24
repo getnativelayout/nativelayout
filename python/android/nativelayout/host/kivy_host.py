@@ -10,6 +10,7 @@ from dataclasses import replace
 
 from kivy.clock import Clock
 from kivy.core.image import Image as CoreImage
+from kivy.graphics import PopMatrix, PushMatrix, Scale, Translate
 from kivy.metrics import dp, sp
 from kivy.uix.label import Label
 from kivy.uix.relativelayout import RelativeLayout
@@ -109,6 +110,11 @@ class NLArea(RelativeLayout):
 
 
 class KivyLayoutHost(LayoutHost):
+    # Pulling the scroll past its end stretches the content from that edge, like the Android host,
+    # instead of moving the whole body and showing the window behind it. Set to False for the plain Kivy bounce.
+    stretch_overscroll = True
+    MAX_STRETCH = 0.3
+
     def __init__(self, area: NLArea, image_resolver=None, store_path: str | None = None):
         self.area = area
         self.image_resolver = image_resolver or (lambda source: None)
@@ -129,6 +135,7 @@ class KivyLayoutHost(LayoutHost):
         self.scroll = ScrollView(do_scroll_x=False, bar_width=dp(3), size_hint=(None, None))
         self.content = RelativeLayout(size_hint=(None, None))
         self.scroll.add_widget(self.content)
+        self._init_stretch()
         self.header_layer = RelativeLayout(size_hint=(None, None))
         self.footer_layer = RelativeLayout(size_hint=(None, None))
         self.float_layer = RelativeLayout(size_hint=(None, None))
@@ -145,6 +152,44 @@ class KivyLayoutHost(LayoutHost):
 
     def px(self, length: Length | None) -> float:
         return self.metrics.px(length)
+
+    # ---------------------------------------------------------------- overscroll
+    def _init_stretch(self) -> None:
+        """Adds the matrices that turn the displacement of the Kivy bounce into a stretch of the content."""
+        if not self.stretch_overscroll:
+            return
+        self._st_back = Translate(0, 0)      # puts the content back where the edge is
+        self._st_pivot = Translate(0, 0)     # moves the pulled edge to the origin
+        self._st_scale = Scale(1, 1, 1)
+        self._st_unpivot = Translate(0, 0)
+        canvas = self.content.canvas
+        canvas.before.add(PushMatrix())
+        for inst in (self._st_back, self._st_pivot, self._st_scale, self._st_unpivot):
+            canvas.before.add(inst)
+        canvas.after.add(PopMatrix())
+        for w in (self.content, self.scroll):
+            w.bind(pos=self._update_stretch, size=self._update_stretch)
+
+    def _update_stretch(self, *_args) -> None:
+        """The scroll view moves the content past its end during a pull; undo that move and stretch instead.
+
+        Everything is in the local coordinates of the content (its origin is its bottom-left corner).
+        """
+        sc, ct = self.scroll, self.content
+        top_gap = max(sc.top - ct.top, 0.0)       # content pulled down: a gap shows at the top
+        bottom_gap = max(ct.y - sc.y, 0.0)        # content pulled up: a gap shows at the bottom
+        back = pivot = 0.0
+        scale = 1.0
+        if top_gap > 0.5:
+            scale = 1.0 + min(top_gap / max(sc.height, 1.0), self.MAX_STRETCH)
+            back, pivot = top_gap, ct.height       # the pulled edge is the top of the content
+        elif bottom_gap > 0.5:
+            scale = 1.0 + min(bottom_gap / max(sc.height, 1.0), self.MAX_STRETCH)
+            back, pivot = -bottom_gap, 0.0         # the pulled edge is the bottom of the content
+        self._st_back.y = back
+        self._st_pivot.y = pivot
+        self._st_scale.y = scale
+        self._st_unpivot.y = -pivot
 
     # ---------------------------------------------------------------- LayoutHost
     def apply_changes(self, changes) -> None:
