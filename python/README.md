@@ -37,7 +37,7 @@ body { padding: 16px; gap: 12px; }
 
 ```python
 import kivy  # noqa: F401
-from nativelayout.core.program import state, view, click
+from nativelayout.core import state, view, click
 from nativelayout.host import run_app, file_loader
 
 def screen():
