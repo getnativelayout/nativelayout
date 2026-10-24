@@ -49,17 +49,16 @@ body { padding: 16px; gap: 12px; }
 `main.py`:
 
 ```python
-import kivy  # noqa: F401
-from nativelayout.core import state, view, click
-from nativelayout.host import run_app, file_loader
+import kivy  # noqa: F401  (only needed in Pydroid)
+import nativelayout as nl
 
 def screen():
-    s = state({"n": 0, "name": "world"})
-    if click(".mais"):
+    s = nl.state({"n": 0, "name": "world"})
+    if nl.click(".mais"):
         s["n"] += 1
-    return view("screen.nl", s)
+    return nl.view("screen.nl", s)
 
-run_app(file_loader("."), app=screen)
+nl.run(screen)
 ```
 
 The file describes the screen. The logic (state and taps) stays in your Python code, in a screen function.
@@ -69,7 +68,13 @@ The file describes the screen. The logic (state and taps) stays in your Python c
 - `nativelayout.core`: parser, expander, layout engine, differ and the program side (`state`, `view`, `click`, `go`, `value`, `save`, ...). Pure Python.
 - `nativelayout.host`: the Kivy host. It draws on a canvas; it does not build platform-native views.
 
-`nativelayout` is a namespace package, so import from the two sub-packages: `from nativelayout.core import state, view, click` and `from nativelayout.host import run_app, file_loader`. The Kivy host is loaded only when you import `nativelayout.host`.
+One import is enough: `import nativelayout as nl` gives the verbs of the core (`nl.state`, `nl.view`, `nl.click`, `nl.go`, ...) and `nl.run(screen)`, which opens the window and reads the `.nl` files from the folder of your script (pass `folder` to change it). `from nativelayout import state, view, ...` also works. The Kivy host is loaded only when you use one of its names (`run`, `run_app`, `file_loader`, `NativeView`), so the core works without Kivy. The sub-packages `nativelayout.core` and `nativelayout.host` can still be imported directly.
+
+In Pydroid, the file you open must contain `import kivy` itself; otherwise Pydroid does not start the Kivy window.
+
+## Guide
+
+The verbs, several screens, dialogs, storage, images and the status of the host are in the [Python guide](https://github.com/getnativelayout/nativelayout/blob/main/python/docs/GUIDE.md).
 
 ## Links
 
