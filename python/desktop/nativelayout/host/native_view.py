@@ -68,8 +68,14 @@ class NativeView(NativeViewBase):
 
 
 def run_app(loader, app=None, body=None, title: str = "nativelayout", **options) -> None:
-    """Opens a Kivy window with the program. A shortcut for scripts and examples."""
+    """Opens a Kivy window with the program. A shortcut for scripts and examples.
+
+    `loader` is a function `name -> text | None`, or the path of the folder with the .nl files.
+    """
     from kivy.app import App
+
+    if isinstance(loader, str):
+        loader = file_loader(loader)
 
     class _App(App):
         def build(self):
