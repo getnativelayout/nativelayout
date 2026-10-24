@@ -1,0 +1,58 @@
+[INFO   ] Logger: Record log in /storage/emulated/0/NativeLayout/Python/nativelayout-python-nl/python/examples/contador/.kivy/logs/kivy_26-10-24_13.txt
+[INFO   ] Kivy: v2.3.1
+[INFO   ] Kivy: Installed at "/data/user/0/ru.iiec.pydroid3/files/aarch64-linux-android/lib/python3.13/site-packages/kivy/__init__.py"
+[INFO   ] Python: v3.13.13 (main, May 12 2026, 00:20:28) [GCC 11.4.0]
+[INFO   ] Python: Interpreter at "/data/user/0/ru.iiec.pydroid3/files/aarch64-linux-android/bin/python3"
+[INFO   ] Logger: Purge log fired. Processing...
+[INFO   ] Logger: Purge finished!
+[INFO   ] Image: Providers: img_tex, img_dds, img_sdl2, img_pil (img_ffpyplayer ignored)
+[INFO   ] Factory: 195 symbols loaded
+[INFO   ] Text: Provider: sdl2
+[INFO   ] Window: Provider: sdl2
+[INFO   ] GL: Using the "OpenGL ES 2" graphics system
+[INFO   ] GL: Backend used <sdl2>
+[INFO   ] GL: OpenGL version <b'OpenGL ES 3.2 V@415.0 (GIT@af4b174, I386ada412e, 1599733366) (Date:09/10/20)'>
+[INFO   ] GL: OpenGL vendor <b'Qualcomm'>
+[INFO   ] GL: OpenGL renderer <b'Adreno (TM) 612'>
+[INFO   ] GL: OpenGL parsed version: 3, 2
+[INFO   ] GL: Texture max size <16384>
+[INFO   ] GL: Texture max units <16>
+[INFO   ] Window: auto add sdl2 input provider
+[INFO   ] Window: virtual keyboard not allowed, single mode, not docked
+[DEBUG  ] Using selector: EpollSelector
+[WARNING] Base: Unknown <android> provider
+[INFO   ] Base: Start application main loop
+[WARNING] stderr: Traceback (most recent call last):
+[WARNING] stderr:   File "/data/user/0/ru.iiec.pydroid3/files/aarch64-linux-android/lib/python3.13/site-packages/nativelayout/core/program.py", line 146, in run
+[WARNING] stderr:     await self._run_app(self._app)
+[WARNING] stderr:   File "/data/user/0/ru.iiec.pydroid3/files/aarch64-linux-android/lib/python3.13/site-packages/nativelayout/core/program.py", line 206, in _run_app
+[WARNING] stderr:     if not await self.render(page.screen, page.data):
+[WARNING] stderr:            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[WARNING] stderr:   File "/data/user/0/ru.iiec.pydroid3/files/aarch64-linux-android/lib/python3.13/site-packages/nativelayout/core/program.py", line 99, in render
+[WARNING] stderr:     prepared, expanded = await loop.run_in_executor(self._worker, work)
+[WARNING] stderr:                          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[WARNING] stderr:   File "/data/user/0/ru.iiec.pydroid3/files/aarch64-linux-android/lib/python3.13/concurrent/futures/thread.py", line 59, in run
+[WARNING] stderr:     result = self.fn(*self.args, **self.kwargs)
+[WARNING] stderr:   File "/data/user/0/ru.iiec.pydroid3/files/aarch64-linux-android/lib/python3.13/site-packages/nativelayout/core/program.py", line 95, in work
+[WARNING] stderr:     ex = Expander.expand(screen.source, data, lambda n: self._loader(n), self._is_dark())
+[WARNING] stderr:   File "/data/user/0/ru.iiec.pydroid3/files/aarch64-linux-android/lib/python3.13/site-packages/nativelayout/core/expander.py", line 260, in expand
+[WARNING] stderr:     return _ScreenExpander(source, data, resolve or (lambda name: None), dark).expand()
+[WARNING] stderr:            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^
+[WARNING] stderr:   File "/data/user/0/ru.iiec.pydroid3/files/aarch64-linux-android/lib/python3.13/site-packages/nativelayout/core/expander.py", line 607, in expand
+[WARNING] stderr:     self._emit(prepared.nodes, Scope(None, self.data))
+[WARNING] stderr:     ~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[WARNING] stderr:   File "/data/user/0/ru.iiec.pydroid3/files/aarch64-linux-android/lib/python3.13/site-packages/nativelayout/core/expander.py", line 795, in _emit
+[WARNING] stderr:     self.out.append(self._render_parts(node.parts, line, scope))
+[WARNING] stderr:                     ~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^
+[WARNING] stderr:   File "/data/user/0/ru.iiec.pydroid3/files/aarch64-linux-android/lib/python3.13/site-packages/nativelayout/core/expander.py", line 1056, in _render_parts
+[WARNING] stderr:     sb.append(self._val_text(p, line, scope))
+[WARNING] stderr:               ~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^
+[WARNING] stderr:   File "/data/user/0/ru.iiec.pydroid3/files/aarch64-linux-android/lib/python3.13/site-packages/nativelayout/core/expander.py", line 907, in _val_text
+[WARNING] stderr:     return self._value_text(v, line, scope, True)
+[WARNING] stderr:            ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^
+[WARNING] stderr:   File "/data/user/0/ru.iiec.pydroid3/files/aarch64-linux-android/lib/python3.13/site-packages/nativelayout/core/expander.py", line 888, in _value_text
+[WARNING] stderr:     x = self._lookup_path(name, v.path, line, scope)
+[WARNING] stderr:   File "/data/user/0/ru.iiec.pydroid3/files/aarch64-linux-android/lib/python3.13/site-packages/nativelayout/core/expander.py", line 985, in _lookup_path
+[WARNING] stderr:     raise self._missing(name, line, parts[0])
+[WARNING] stderr: nativelayout.core.expander.ExpandError: the name 'flag' was not given by the program
+[INFO   ] GL: NPOT texture support is available
