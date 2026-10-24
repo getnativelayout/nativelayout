@@ -5,7 +5,7 @@ package.domain = co.adilson889
 source.dir = .
 source.include_exts = py,nl,css,png,json
 version = 1.0
-requirements = python3,kivy==2.3.0,nativelayout==1.2.3
+requirements = python3,kivy==2.3.0,nativelayout==1.2.4
 orientation = portrait
 fullscreen = 0
 android.archs = arm64-v8a
