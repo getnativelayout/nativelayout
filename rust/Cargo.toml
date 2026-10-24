@@ -1,0 +1,12 @@
+[package]
+name = "nativelayout"
+version = "1.2.0"
+edition = "2021"
+description = "Create native interfaces from HTML, in any language. Rust core."
+license = "MPL-2.0"
+repository = "https://github.com/getnativelayout/nativelayout"
+# remove this line only when the crate is ready to be published
+publish = false
+
+[dependencies]
+# the core has no dependencies, like the Kotlin and Python cores
