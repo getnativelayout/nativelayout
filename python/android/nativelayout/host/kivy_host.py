@@ -169,15 +169,21 @@ class KivyLayoutHost(LayoutHost):
         canvas.after.add(PopMatrix())
         for w in (self.content, self.scroll):
             w.bind(pos=self._update_stretch, size=self._update_stretch)
+        self.scroll.bind(scroll_y=self._update_stretch)
 
     def _update_stretch(self, *_args) -> None:
         """The scroll view moves the content past its end during a pull; undo that move and stretch instead.
 
-        Everything is in the local coordinates of the content (its origin is its bottom-left corner).
+        Kivy moves the content with a matrix, not with its `pos` (which stays at 0, 0), so the pull is read
+        from `scroll_y`: beyond 1 the content went down (gap at the top), below 0 it went up (gap at the
+        bottom). Everything is in the local coordinates of the content (its origin is its bottom-left corner).
         """
         sc, ct = self.scroll, self.content
-        top_gap = max(sc.top - ct.top, 0.0)       # content pulled down: a gap shows at the top
-        bottom_gap = max(ct.y - sc.y, 0.0)        # content pulled up: a gap shows at the bottom
+        travel = ct.height - sc.height            # how far the content can scroll
+        top_gap = bottom_gap = 0.0
+        if travel > 1.0:
+            top_gap = max((sc.scroll_y - 1.0) * travel, 0.0)
+            bottom_gap = max(-sc.scroll_y * travel, 0.0)
         back = pivot = 0.0
         scale = 1.0
         if top_gap > 0.5:
