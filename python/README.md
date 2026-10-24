@@ -50,7 +50,8 @@ body { padding: 16px; gap: 12px; }
 
 ```python
 import kivy  # noqa: F401
-from nativelayout import state, view, click, run_app, file_loader
+from nativelayout.core import state, view, click
+from nativelayout.host import run_app, file_loader
 
 def screen():
     s = state({"n": 0, "name": "world"})
@@ -68,7 +69,7 @@ The file describes the screen. The logic (state and taps) stays in your Python c
 - `nativelayout.core`: parser, expander, layout engine, differ and the program side (`state`, `view`, `click`, `go`, `value`, `save`, ...). Pure Python.
 - `nativelayout.host`: the Kivy host. It draws on a canvas; it does not build platform-native views.
 
-Everything is also available from the top level: `from nativelayout import state, view, click, run_app, file_loader`. The Kivy host is loaded only when you use it.
+`nativelayout` is a namespace package, so import from the two sub-packages: `from nativelayout.core import state, view, click` and `from nativelayout.host import run_app, file_loader`. The Kivy host is loaded only when you import `nativelayout.host`.
 
 ## Links
 
