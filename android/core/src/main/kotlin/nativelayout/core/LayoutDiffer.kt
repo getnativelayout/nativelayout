@@ -37,7 +37,8 @@ object LayoutDiffer {
 
     private fun compare(a: Native, n: Native, removed: MutableList<Change>, rest: MutableList<Change>) {
         if (a is NativeBox && n is NativeBox) {
-            if (a.virtual != n.virtual || a.overlay != n.overlay || a.header != n.header || a.footer != n.footer || a.hasAbsolute != n.hasAbsolute) {
+            if (a.virtual != n.virtual || a.overlay != n.overlay || a.header != n.header || a.footer != n.footer || a.hasAbsolute != n.hasAbsolute ||
+                a.style.scrollY != n.style.scrollY) {
                 rest.add(Change.Replace(n.key, n))
                 return
             }
@@ -74,6 +75,8 @@ object LayoutDiffer {
                     a.readOnly != n.readOnly || a.rows != n.rows
             a is NativeCheckbox && n is NativeCheckbox -> a.disabled != n.disabled
             a is NativeImage && n is NativeImage -> a.source != n.source || a.description != n.description
+            a is NativeProgress && n is NativeProgress ->
+                a.value != n.value || a.max != n.max || a.circular != n.circular
             a is NativeItem && n is NativeItem -> a.marker != n.marker
             else -> false
         }
