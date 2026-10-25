@@ -358,9 +358,8 @@ class KivyLayoutHost(LayoutHost):
     def _set_root(self, node: Native) -> None:
         self._reset()
         self.root = self._build(node, None)
-        self.content.opacity = 0.0
-        from kivy.animation import Animation
-        Animation(opacity=1.0, duration=0.22, t="out_quad").start(self.content)
+        from . import motion
+        motion.enter_screen(self)
 
     def _remove(self, key: str) -> None:
         e = self.entries.get(key)
