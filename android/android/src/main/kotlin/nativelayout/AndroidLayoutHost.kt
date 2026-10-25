@@ -42,7 +42,6 @@ import android.view.View
 import android.view.ViewGroup
 import android.view.ViewOutlineProvider
 import android.view.ViewTreeObserver
-import android.view.animation.DecelerateInterpolator
 import android.widget.Button
 import android.widget.CheckBox
 import android.widget.EditText
@@ -321,33 +320,12 @@ class AndroidLayoutHost(
     }
 
     /**
-     * Entrance animation of a screen (the whole column) or of a <dialog> layer.
-     * fade: the view goes from transparent to opaque. slide-up and slide-left also move the content:
-     * for a layer the backdrop fades and the first block (the sheet) is the one that moves.
+     * Entrance animation of a screen (the whole column) or of a <dialog> layer. The motion itself
+     * (a fade and a damped spring) is in [ScreenMotion]; here only `none` is decided.
      */
     private fun animateIn(view: View, anim: Animation, layer: Boolean) {
         if (anim.kind == AnimKind.NONE || anim.durationMs <= 0) return
-        val duration = anim.durationMs.toLong()
-        val interpolator = DecelerateInterpolator()
-        val content: View =
-            if (layer && anim.kind != AnimKind.FADE) (view as? ViewGroup)?.getChildAt(0) ?: view else view
-
-        view.alpha = 0f
-        val fade = view.animate().alpha(1f)
-        val mover = if (content === view) fade else content.animate()
-        when (anim.kind) {
-            AnimKind.SLIDE_UP -> {
-                content.translationY = (if (layer) 96f else 32f) * density
-                mover.translationY(0f)
-            }
-            AnimKind.SLIDE_LEFT -> {
-                content.translationX = 32f * density
-                mover.translationX(0f)
-            }
-            else -> {}
-        }
-        fade.setDuration(duration).setInterpolator(interpolator).start()
-        if (mover !== fade) mover.setDuration(duration).setInterpolator(interpolator).start()
+        ScreenMotion.enter(view, anim, layer, density)
     }
 
     private fun create(a: Change.Create) {
