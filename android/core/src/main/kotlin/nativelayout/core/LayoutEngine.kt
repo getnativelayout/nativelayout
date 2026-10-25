@@ -29,11 +29,15 @@ object LayoutEngine {
 
 private val SUPPORTED_TAGS = setOf(
     "div", "span", "p", "h1", "h2", "h3", "button", "input", "textarea", "img", "ul", "li",
-    "fieldset", "legend", "dialog", "header", "footer"
+    "fieldset", "legend", "dialog", "header", "footer", "progress"
 )
 private const val TAGS_SUGGESTION =
-    "supported tags: div, span, p, h1, h2, h3, button, input, textarea, img, ul, li, fieldset, legend, dialog, header, footer"
+    "supported tags: div, span, p, h1, h2, h3, button, input, textarea, img, ul, li, fieldset, legend, dialog, header, footer, progress"
 private val FIELDSET_BORDER: Int = 0xFFBDBDBD.toInt()
+private val PROGRESS_TRACK: Int = 0xFFE0E0E0.toInt()
+private val PROGRESS_BAR: Int = 0xFF2F81F7.toInt()
+/** Tags whose content can scroll with `overflow-y: auto|scroll` (the root already scrolls with the screen). */
+private val SCROLL_TAGS = setOf("div", "header", "footer", "fieldset")
 private val DIALOG_BACKDROP: Int = 0x80000000.toInt()
 private val BORDER_STYLES = setOf("solid", "dashed", "dotted", "double", "groove", "ridge", "inset", "outset")
 private val REGEX_VAR = Regex("""var\(\s*(--[\w-]+)\s*\)""")
@@ -154,6 +158,14 @@ private class LayoutBuilder(
         "legend" -> b.copy(bold = true, margin = Sides(bottom = Length.rem(0.5f)))
         "dialog" -> b.copy(backgroundColor = DIALOG_BACKDROP, justify = Justify.CENTER, alignItems = Align.CENTER)
         "footer" -> b.copy(direction = Direction.ROW, justify = Justify.CENTER, alignItems = Align.CENTER)
+        "progress" ->
+            if ("circular" in el.attributes) b.copy(
+                width = Size.Dim(Length.rem(2f)), height = Size.Dim(Length.rem(2f)),
+                backgroundColor = PROGRESS_TRACK, textColor = PROGRESS_BAR
+            ) else b.copy(
+                height = Size.Dim(Length.rem(0.5f)), borderRadius = Length.px(999f),
+                backgroundColor = PROGRESS_TRACK, textColor = PROGRESS_BAR
+            )
         "ul" -> b.copy(margin = vertical(1f), padding = Sides(left = Length.rem(1.5f)))
         "button" -> b.copy(
             padding = Sides(Length.rem(0.5f), Length.rem(1f), Length.rem(0.5f), Length.rem(1f)),
@@ -428,12 +440,22 @@ private class LayoutBuilder(
                     e
                 }
             }
-            "overflow", "overflow-x", "overflow-y" -> when (vl) {
-                "hidden", "clip" -> e.copy(overflowHidden = true)
-                "visible" -> e.copy(overflowHidden = false)
-                else -> {
-                    warn("CSS: 'overflow: $vl' is not supported (use hidden or visible)", d.line)
-                    e
+            "overflow", "overflow-x", "overflow-y" -> {
+                val vertical = d.name != "overflow-x"
+                when {
+                    vl == "auto" || vl == "scroll" ->
+                        if (vertical) e.copy(scrollY = true, overflowHidden = true) else {
+                            warn("CSS: '${d.name}: $vl' is not supported (only vertical scrolling exists), ignored", d.line)
+                            e
+                        }
+                    // overflow-x does not undo a vertical scroll
+                    (vl == "hidden" || vl == "clip" || vl == "visible") && !vertical && e.scrollY -> e
+                    vl == "hidden" || vl == "clip" -> e.copy(overflowHidden = true, scrollY = false)
+                    vl == "visible" -> e.copy(overflowHidden = false, scrollY = false)
+                    else -> {
+                        warn("CSS: '${d.name}: $vl' is not supported (use auto, scroll, hidden or visible)", d.line)
+                        e
+                    }
                 }
             }
             "box-shadow" -> elevationOf(v)?.let { e.copy(elevation = it) } ?: invalid()
@@ -766,6 +788,18 @@ private class LayoutBuilder(
 
     private val reservedIds = mutableSetOf<String>()
 
+    /** `overflow-y: auto|scroll` is kept only where it can work: not on the root, and only on boxes. */
+    private fun scrollable(el: HtmlElement, s: NativeStyle, depth: Int): NativeStyle {
+        if (!s.scrollY) return s
+        val reason = when {
+            depth == 0 -> "the screen already scrolls"
+            el.tag !in SCROLL_TAGS -> "it works on div, header, footer and fieldset, not on <${el.tag}>"
+            else -> return s
+        }
+        warn("CSS: 'overflow-y: auto|scroll' is ignored here ($reason)", el.line)
+        return s.copy(scrollY = false, overflowHidden = false)
+    }
+
     private fun convertElement(el: HtmlElement, parentStyle: NativeStyle): Native {
         val tag = el.tag
         if (tag !in SUPPORTED_TAGS) {
@@ -773,7 +807,7 @@ private class LayoutBuilder(
         }
         val myDepth = depth
         val myParent = parentTag
-        val style = fixPosition(el, computeStyle(el, parentStyle), myDepth)
+        val style = scrollable(el, fixPosition(el, computeStyle(el, parentStyle), myDepth), myDepth)
         val id = registerId(el)
         val classes = el.classes
         val disabled = "disabled" in el.attributes || groupDisabled
@@ -802,6 +836,15 @@ private class LayoutBuilder(
                     )
                 }
                 NativeImage(id, classes, style, el.line, src, el.attributes["alt"] ?: "")
+            }
+            "progress" -> {
+                val maxText = el.attributes["max"]?.trim()
+                val max = if (maxText == null) 1f else maxText.toFloatOrNull()?.takeIf { it > 0f }
+                    ?: throw err("<progress> 'max' must be a number greater than 0", el.line, "max")
+                val valueText = el.attributes["value"]?.trim()
+                val value = if (valueText == null) null else valueText.toFloatOrNull()
+                    ?: throw err("<progress> 'value' must be a number", el.line, "value", "leave 'value' out for an indeterminate loading")
+                NativeProgress(id, classes, style, el.line, value, max, "circular" in el.attributes)
             }
             "ul" -> convertList(el, style, id, classes)
             "li" -> throw err("<li> can only be inside <ul>", el.line, "<li")
@@ -867,10 +910,19 @@ private class LayoutBuilder(
                 if (!virtual && !isGroup && only is NativeText && only.style.position != Position.ABSOLUTE) {
                     NativeText(id, classes, style, el.line, only.spans)
                 } else {
+                    val hasAbsolute = !virtual && children.any { it.style.position == Position.ABSOLUTE }
+                    var boxStyle = style
+                    if (style.scrollY && (virtual || hasAbsolute)) {
+                        warn(
+                            "CSS: 'overflow-y: auto|scroll' cannot be used on a 'virtual' box or on a box with " +
+                                "'position: absolute' children, ignored", el.line
+                        )
+                        boxStyle = style.copy(scrollY = false, overflowHidden = false)
+                    }
                     NativeBox(
-                        id, classes, style, el.line, children, virtual,
+                        id, classes, boxStyle, el.line, children, virtual,
                         overlay = tag == "dialog", header = tag == "header", footer = tag == "footer",
-                        hasAbsolute = !virtual && children.any { it.style.position == Position.ABSOLUTE }
+                        hasAbsolute = hasAbsolute
                     )
                 }
             }
