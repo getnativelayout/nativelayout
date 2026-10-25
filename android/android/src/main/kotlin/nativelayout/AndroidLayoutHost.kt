@@ -457,6 +457,7 @@ class AndroidLayoutHost(
             is NativeField -> (entry.view as? EditText)?.let { configureField(it, n) }
             is NativeCheckbox -> (entry.view as? CheckBox)?.let { it.isEnabled = !n.disabled }
             is NativeImage -> (entry.view as? ImageView)?.let { configureImage(it, n) }
+            is NativeProgress -> (entry.view as? NLProgress)?.setProgress(n.value, n.max, n.circular, animate = true)
             is NativeItem -> ((entry.view as? ViewGroup)?.getChildAt(0) as? TextView)?.text = n.marker + " "
             else -> {}
         }
@@ -482,6 +483,10 @@ class AndroidLayoutHost(
                     // the box has absolute children: a frame holds the flow and them
                     val frame = AbsFrame(context)
                     ViewEntry(frame, frame.flow, node.style, node)
+                } else if (node.style.scrollY) {
+                    // overflow-y: auto|scroll: a scroll holds the box that has the children
+                    val scroll = NLScroll(context)
+                    ViewEntry(scroll, scroll.content, node.style, node)
                 } else {
                     val box = NLBox(context)
                     ViewEntry(box, box, node.style, node)
@@ -528,6 +533,11 @@ class AndroidLayoutHost(
                 cb.isChecked = node.checked
                 cb.isEnabled = !node.disabled
                 ViewEntry(cb, null, node.style, node)
+            }
+            is NativeProgress -> {
+                val pv = NLProgress(context)
+                pv.setProgress(node.value, node.max, node.circular, animate = false)
+                ViewEntry(pv, null, node.style, node)
             }
             is NativeImage -> {
                 val iv = ImageView(context)
@@ -748,9 +758,14 @@ class AndroidLayoutHost(
         val st = entry.style
         val n = entry.node
 
-        applyBackground(v, st, ripple = v is Button)
-        // with absolute children the padding belongs to the flow: they are placed from the edge of the box
-        (if (v is AbsFrame) v.flow else v)
+        // the ring of a circular <progress> draws its own track: the view has no background
+        applyBackground(
+            v, if (n is NativeProgress && n.circular) st.copy(backgroundColor = 0, gradient = null, backgroundImage = null) else st,
+            ripple = v is Button
+        )
+        // with absolute children the padding belongs to the flow: they are placed from the edge of the box;
+        // in a scroll it belongs to the content, so it scrolls with it
+        (when (v) { is AbsFrame -> v.flow; is NLScroll -> v.content; else -> v })
             .setPadding(px(st.padding.left), px(st.padding.top), px(st.padding.right), px(st.padding.bottom))
         applyAlpha(entry)
         v.minimumWidth = st.minWidth?.let { px(it) } ?: 0
@@ -786,6 +801,20 @@ class AndroidLayoutHost(
 
         val container = entry.container
         if (container is LinearLayout) applyContainer(container, st)
+        if (v is NLScroll) {
+            // the size limits are the ones of the scroll, not of the box inside it
+            v.maxWidthPx = st.maxWidth?.let { px(it) } ?: -1
+            v.maxHeightPx = st.maxHeight?.let { px(it) } ?: -1
+            v.content.maxWidthPx = -1
+            v.content.maxHeightPx = -1
+            v.requestLayout()
+        }
+        if (v is NLProgress) {
+            v.barColor = st.textColor
+            v.trackColor = st.backgroundColor
+            v.radiusPx = pxF(st.borderRadius)
+            v.invalidate()
+        }
 
         // overflow: hidden clips to the rounded corners; box-shadow becomes elevation
         if (st.overflowHidden) {
