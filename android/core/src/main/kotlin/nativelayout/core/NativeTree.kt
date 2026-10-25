@@ -136,6 +136,8 @@ data class NativeStyle(
     val minHeight: Length? = null,
     val maxHeight: Length? = null,
     val overflowHidden: Boolean = false,
+    /** `overflow-y: auto|scroll` on a box: its content scrolls inside it when it does not fit. */
+    val scrollY: Boolean = false,
     val alignSelf: Align? = null,
     val dock: Dock? = null,
     val position: Position = Position.STATIC,
@@ -226,6 +228,19 @@ class NativeImage(
     val source: String, val description: String
 ) : Native(id, classes, style, line)
 
+/**
+ * A <progress>. [value] null means indeterminate (a loading animation); otherwise it is the amount
+ * done, out of [max]. [circular] draws a ring instead of a bar. The bar takes the `color` of the
+ * element and the track its `background-color`.
+ */
+class NativeProgress(
+    id: String?, classes: List<String>, style: NativeStyle, line: Int,
+    val value: Float?, val max: Float, val circular: Boolean
+) : Native(id, classes, style, line) {
+    /** Done, from 0 to 1 (0 when indeterminate). */
+    val fraction: Float get() = ((value ?: 0f) / max).coerceIn(0f, 1f)
+}
+
 class NativeList(
     id: String?, classes: List<String>, style: NativeStyle, line: Int,
     val items: List<NativeItem>
@@ -251,6 +266,7 @@ fun Native.describe(level: Int = 0): String {
         is NativeButton -> " \"$label\""
         is NativeField -> " $type"
         is NativeImage -> " $source"
+        is NativeProgress -> " ${value ?: "indeterminate"}"
         else -> ""
     }
     val name = this::class.simpleName ?: "Native"
@@ -269,6 +285,7 @@ fun Native.sameAs(o: Native): Boolean {
                 disabled == o.disabled && readOnly == o.readOnly && rows == o.rows
         this is NativeCheckbox && o is NativeCheckbox -> checked == o.checked && disabled == o.disabled
         this is NativeImage && o is NativeImage -> source == o.source && description == o.description
+        this is NativeProgress && o is NativeProgress -> value == o.value && max == o.max && circular == o.circular
         this is NativeItem && o is NativeItem -> marker == o.marker
         this is NativeBox && o is NativeBox -> virtual == o.virtual && overlay == o.overlay && header == o.header && footer == o.footer && hasAbsolute == o.hasAbsolute
         else -> true
