@@ -272,6 +272,8 @@ pub struct NativeStyle {
     pub min_height: Option<Length>,
     pub max_height: Option<Length>,
     pub overflow_hidden: bool,
+    /// `overflow-y: auto|scroll` on a box: its content scrolls inside it when it does not fit.
+    pub scroll_y: bool,
     pub align_self: Option<Align>,
     pub dock: Option<Dock>,
     pub position: Position,
@@ -327,6 +329,7 @@ impl Default for NativeStyle {
             min_height: None,
             max_height: None,
             overflow_hidden: false,
+            scroll_y: false,
             align_self: None,
             dock: None,
             position: Position::Static,
@@ -374,6 +377,15 @@ impl Span {
     }
 }
 
+/// A float the way Kotlin prints it: `3.0`, not `3`.
+fn kotlin_float(v: f32) -> String {
+    if v.is_finite() && v == v.trunc() {
+        format!("{:.1}", v)
+    } else {
+        format!("{}", v)
+    }
+}
+
 // ---------- the tree ----------
 
 #[derive(Debug, Clone, PartialEq, Default)]
@@ -405,6 +417,10 @@ pub enum NativeKind {
     },
     Checkbox { checked: bool, disabled: bool },
     Image { source: String, description: String },
+    /// A `<progress>`. `value` `None` means indeterminate (a loading animation); otherwise it is the
+    /// amount done, out of `max`. `circular` draws a ring instead of a bar. The bar takes the `color`
+    /// of the element and the track its `background-color`.
+    Progress { value: Option<f32>, max: f32, circular: bool },
     /// `items` are always `NativeKind::Item`.
     List { items: Vec<Native> },
     Item { marker: String, children: Vec<Native> },
@@ -452,6 +468,14 @@ impl Native {
         }
     }
 
+    /// Done, from 0 to 1, for a `Progress` (0 when indeterminate); `None` for any other kind.
+    pub fn progress_fraction(&self) -> Option<f32> {
+        match &self.kind {
+            NativeKind::Progress { value, max, .. } => Some((value.unwrap_or(0.0) / max).clamp(0.0, 1.0)),
+            _ => None,
+        }
+    }
+
     /// `nativeChildren()` in Kotlin.
     pub fn native_children(&self) -> &[Native] {
         match &self.kind {
@@ -481,6 +505,7 @@ impl Native {
             NativeKind::Field { .. } => "NativeField",
             NativeKind::Checkbox { .. } => "NativeCheckbox",
             NativeKind::Image { .. } => "NativeImage",
+            NativeKind::Progress { .. } => "NativeProgress",
             NativeKind::List { .. } => "NativeList",
             NativeKind::Item { .. } => "NativeItem",
         }
@@ -505,6 +530,10 @@ impl Native {
             NativeKind::Button { label, .. } => format!(" \"{}\"", label),
             NativeKind::Field { field_type, .. } => format!(" {}", field_type.name()),
             NativeKind::Image { source, .. } => format!(" {}", source),
+            NativeKind::Progress { value, .. } => match value {
+                Some(v) => format!(" {}", kotlin_float(*v)),
+                None => " indeterminate".to_string(),
+            },
             _ => String::new(),
         };
         let mut out = String::new();
@@ -552,6 +581,10 @@ impl Native {
                 NativeKind::Image { source: s2, description: d2 },
             ) => s1 == s2 && d1 == d2,
             (NativeKind::Item { marker: m1, .. }, NativeKind::Item { marker: m2, .. }) => m1 == m2,
+            (
+                NativeKind::Progress { value: v1, max: x1, circular: c1 },
+                NativeKind::Progress { value: v2, max: x2, circular: c2 },
+            ) => v1 == v2 && x1 == x2 && c1 == c2,
             (NativeKind::Box(a), NativeKind::Box(b)) => {
                 a.is_virtual == b.is_virtual
                     && a.overlay == b.overlay
@@ -618,6 +651,21 @@ mod tests {
         assert_eq!(s.object_fit, ImageFit::Contain);
         assert_eq!(s.position, Position::Static);
         assert!(s.animation.is_none() && s.states.is_none() && s.gradient.is_none());
+    }
+
+    #[test]
+    fn progress_describe_same_and_fraction() {
+        let p = |v: Option<f32>| mk(NativeKind::Progress { value: v, max: 12.0, circular: false });
+        assert_eq!(p(Some(3.0)).describe(), "NativeProgress 3.0\n");
+        assert_eq!(p(Some(0.5)).describe(), "NativeProgress 0.5\n");
+        assert_eq!(p(None).describe(), "NativeProgress indeterminate\n");
+        assert_eq!(p(Some(3.0)).progress_fraction(), Some(0.25));
+        assert_eq!(p(None).progress_fraction(), Some(0.0));
+        assert_eq!(p(Some(99.0)).progress_fraction(), Some(1.0));
+        assert_eq!(button("x").progress_fraction(), None);
+        assert!(p(Some(1.0)).same_as(&p(Some(1.0))));
+        assert!(!p(Some(1.0)).same_as(&p(Some(2.0))));
+        assert!(!p(Some(1.0)).same_as(&p(None)));
     }
 
     #[test]
