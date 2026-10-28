@@ -9,4 +9,5 @@ repository = "https://github.com/getnativelayout/nativelayout"
 publish = false
 
 [dependencies]
-# the core has no dependencies, like the Kotlin and Python cores
+# the Expander is written around regular expressions, like the Kotlin one
+regex = "1"
