@@ -37,6 +37,52 @@ pub trait LayoutHost {
     fn delete(&mut self, key: &str);
 
     fn close(&mut self);
+
+    /// Shows an error in place of the screen. Hosts that cannot do it keep the default (nothing).
+    fn show_error(&mut self, _text: &str) {}
+
+    /// Makes the next `next_event` return the back event (`BACK_EVENT_KEY`).
+    fn post_back(&mut self) {}
+}
+
+/// A boxed host is a host, so the program side does not need to be generic over it.
+impl LayoutHost for Box<dyn LayoutHost> {
+    fn apply_changes(&mut self, changes: &[Change]) {
+        (**self).apply_changes(changes)
+    }
+    fn next_event(&mut self) -> Option<LayoutEvent> {
+        (**self).next_event()
+    }
+    fn field_text(&self, id: &str) -> Option<String> {
+        (**self).field_text(id)
+    }
+    fn field_checked(&self, id: &str) -> Option<bool> {
+        (**self).field_checked(id)
+    }
+    fn set_value(&mut self, id: &str, text: &str) {
+        (**self).set_value(id, text)
+    }
+    fn save(&mut self, key: &str, text: &str) {
+        (**self).save(key, text)
+    }
+    fn load(&self, key: &str) -> Option<String> {
+        (**self).load(key)
+    }
+    fn exists(&self, key: &str) -> bool {
+        (**self).exists(key)
+    }
+    fn delete(&mut self, key: &str) {
+        (**self).delete(key)
+    }
+    fn close(&mut self) {
+        (**self).close()
+    }
+    fn show_error(&mut self, text: &str) {
+        (**self).show_error(text)
+    }
+    fn post_back(&mut self) {
+        (**self).post_back()
+    }
 }
 
 #[derive(Debug, Clone)]
