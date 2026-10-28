@@ -177,12 +177,12 @@ fn hex(b: u8) -> u32 {
 }
 
 /// Kotlin `Float.roundToInt`: ties go toward positive infinity.
-fn round_to_int(x: f32) -> i32 {
+pub(crate) fn round_to_int(x: f32) -> i32 {
     (x + 0.5).floor() as i32
 }
 
 /// Like Kotlin `toFloatOrNull`: "nan" and "inf" are not numbers here.
-fn parse_f32(s: &str) -> Option<f32> {
+pub(crate) fn parse_f32(s: &str) -> Option<f32> {
     s.parse::<f32>().ok().filter(|v| v.is_finite())
 }
 
@@ -255,7 +255,7 @@ pub fn color(text: &str) -> Option<u32> {
 }
 
 /// Matches `-?\d*\.?\d+`.
-fn is_number(s: &str) -> bool {
+pub(crate) fn is_number(s: &str) -> bool {
     let body = s.strip_prefix('-').unwrap_or(s);
     let digits = |x: &str| x.bytes().all(|b| b.is_ascii_digit());
     match body.split_once('.') {
