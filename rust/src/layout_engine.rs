@@ -29,14 +29,18 @@ pub fn build(html: &str, start_line: usize, variables: &HashMap<String, String>)
     LayoutBuilder::new(html, start_line, variables).build()
 }
 
-const SUPPORTED_TAGS: [&str; 17] = [
+const SUPPORTED_TAGS: [&str; 18] = [
     "div", "span", "p", "h1", "h2", "h3", "button", "input", "textarea", "img", "ul", "li", "fieldset",
-    "legend", "dialog", "header", "footer",
+    "legend", "dialog", "header", "footer", "progress",
 ];
 const TAGS_SUGGESTION: &str =
-    "supported tags: div, span, p, h1, h2, h3, button, input, textarea, img, ul, li, fieldset, legend, dialog, header, footer";
+    "supported tags: div, span, p, h1, h2, h3, button, input, textarea, img, ul, li, fieldset, legend, dialog, header, footer, progress";
 const FIELDSET_BORDER: u32 = 0xFFBD_BDBD;
 const DIALOG_BACKDROP: u32 = 0x8000_0000;
+const PROGRESS_TRACK: u32 = 0xFFE0_E0E0;
+const PROGRESS_BAR: u32 = 0xFF2F_81F7;
+/// Tags whose content can scroll with `overflow-y: auto|scroll` (the root already scrolls with the screen).
+const SCROLL_TAGS: [&str; 4] = ["div", "header", "footer", "fieldset"];
 const BORDER_STYLES: [&str; 8] = ["solid", "dashed", "dotted", "double", "groove", "ridge", "inset", "outset"];
 const DECORATION_STYLES: [&str; 5] = ["solid", "double", "dotted", "dashed", "wavy"];
 
@@ -179,6 +183,17 @@ fn tag_defaults(el: &HtmlElement, b: NativeStyle) -> NativeStyle {
             s.direction = Direction::Row;
             s.justify = Justify::Center;
             s.align_items = Align::Center;
+        }
+        "progress" => {
+            if el.has_attr("circular") {
+                s.width = Size::Dim(Length::rem(2.0));
+                s.height = Size::Dim(Length::rem(2.0));
+            } else {
+                s.height = Size::Dim(Length::rem(0.5));
+                s.border_radius = Length::px(999.0);
+            }
+            s.background_color = PROGRESS_TRACK;
+            s.text_color = PROGRESS_BAR;
         }
         "ul" => {
             s.margin = vertical(1.0);
@@ -702,6 +717,25 @@ impl LayoutBuilder {
         r
     }
 
+    /// `overflow-y: auto|scroll` is kept only where it can work: not on the root, and only on boxes.
+    fn scrollable(&mut self, el: &HtmlElement, s: NativeStyle, depth: usize) -> NativeStyle {
+        if !s.scroll_y {
+            return s;
+        }
+        let reason = if depth == 0 {
+            "the screen already scrolls".to_string()
+        } else if !SCROLL_TAGS.contains(&el.tag.as_str()) {
+            format!("it works on div, header, footer and fieldset, not on <{}>", el.tag)
+        } else {
+            return s;
+        };
+        self.warn(&format!("CSS: 'overflow-y: auto|scroll' is ignored here ({})", reason), el.line);
+        let mut r = s;
+        r.scroll_y = false;
+        r.overflow_hidden = false;
+        r
+    }
+
     fn compute_style(&mut self, el: &HtmlElement, parent_style: &NativeStyle) -> Res<NativeStyle> {
         let mut e = tag_defaults(el, inherit(parent_style));
         for d in self.declarations_of(el)? {
@@ -1057,20 +1091,39 @@ impl LayoutBuilder {
                     self.unsupported(e, d, msg)
                 }
             },
-            "overflow" | "overflow-x" | "overflow-y" => match vl.as_str() {
-                "hidden" | "clip" => {
+            "overflow" | "overflow-x" | "overflow-y" => {
+                let vertical = d.name != "overflow-x";
+                if vl == "auto" || vl == "scroll" {
+                    if vertical {
+                        r.scroll_y = true;
+                        r.overflow_hidden = true;
+                        r
+                    } else {
+                        let msg = format!(
+                            "CSS: '{}: {}' is not supported (only vertical scrolling exists), ignored",
+                            d.name, vl
+                        );
+                        self.unsupported(e, d, msg)
+                    }
+                } else if (vl == "hidden" || vl == "clip" || vl == "visible") && !vertical && e.scroll_y {
+                    // overflow-x does not undo a vertical scroll
+                    r
+                } else if vl == "hidden" || vl == "clip" {
                     r.overflow_hidden = true;
+                    r.scroll_y = false;
                     r
-                }
-                "visible" => {
+                } else if vl == "visible" {
                     r.overflow_hidden = false;
+                    r.scroll_y = false;
                     r
-                }
-                _ => {
-                    let msg = format!("CSS: 'overflow: {}' is not supported (use hidden or visible)", vl);
+                } else {
+                    let msg = format!(
+                        "CSS: '{}: {}' is not supported (use auto, scroll, hidden or visible)",
+                        d.name, vl
+                    );
                     self.unsupported(e, d, msg)
                 }
-            },
+            }
             "box-shadow" => match elevation_of(&v) {
                 Some(l) => {
                     r.elevation = l;
@@ -1595,7 +1648,8 @@ impl LayoutBuilder {
         let my_depth = self.depth;
         let my_parent = self.parent_tag.clone();
         let computed = self.compute_style(el, parent_style)?;
-        let style = self.fix_position(el, computed, my_depth);
+        let positioned = self.fix_position(el, computed, my_depth);
+        let style = self.scrollable(el, positioned, my_depth);
         let id = self.register_id(el)?;
         let classes = el.classes();
         let disabled = el.has_attr("disabled") || self.group_disabled;
@@ -1662,6 +1716,43 @@ impl LayoutBuilder {
                         source: src,
                         description: el.attr("alt").unwrap_or("").to_string(),
                     },
+                )
+            }
+            "progress" => {
+                let max = match el.attr("max").map(|t| t.trim()) {
+                    None => 1.0,
+                    Some(t) => match css::parse_f32(t).filter(|v| *v > 0.0) {
+                        Some(v) => v,
+                        None => {
+                            return Err(self.err(
+                                "<progress> 'max' must be a number greater than 0",
+                                el.line,
+                                Some("max"),
+                                None,
+                            ));
+                        }
+                    },
+                };
+                let value = match el.attr("value").map(|t| t.trim()) {
+                    None => None,
+                    Some(t) => match css::parse_f32(t) {
+                        Some(v) => Some(v),
+                        None => {
+                            return Err(self.err(
+                                "<progress> 'value' must be a number",
+                                el.line,
+                                Some("value"),
+                                Some("leave 'value' out for an indeterminate loading"),
+                            ));
+                        }
+                    },
+                };
+                Native::new(
+                    id,
+                    classes,
+                    style.clone(),
+                    el.line,
+                    NativeKind::Progress { value, max, circular: el.has_attr("circular") },
                 )
             }
             "ul" => self.convert_list(el, &style, id, classes)?,
@@ -1793,10 +1884,19 @@ impl LayoutBuilder {
                     _ => {
                         let has_absolute =
                             !is_virtual && children.iter().any(|c| c.style.position == Position::Absolute);
+                        let mut box_style = style.clone();
+                        if style.scroll_y && (is_virtual || has_absolute) {
+                            self.warn(
+                                "CSS: 'overflow-y: auto|scroll' cannot be used on a 'virtual' box or on a box with 'position: absolute' children, ignored",
+                                el.line,
+                            );
+                            box_style.scroll_y = false;
+                            box_style.overflow_hidden = false;
+                        }
                         Native::new(
                             id,
                             classes,
-                            style.clone(),
+                            box_style,
                             el.line,
                             NativeKind::Box(NativeBox {
                                 children,
