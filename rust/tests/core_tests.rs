@@ -351,3 +351,148 @@ fn the_expanded_html_builds_a_tree() {
     assert!(tree.by_id.contains_key("b"));
     assert_eq!(tree.root.native_children().len(), 2);
 }
+
+// ---------- ScrollProgressTest ----------
+
+fn progress_of(r: &LayoutResult, id: &str) -> (Option<f32>, f32, bool) {
+    match &r.by_id[id].kind {
+        NativeKind::Progress { value, max, circular } => (*value, *max, *circular),
+        _ => panic!("expected a progress"),
+    }
+}
+
+#[test]
+fn overflow_y_auto_and_scroll_make_a_box_scroll() {
+    for v in ["auto", "scroll"] {
+        let html = format!(r#"<div><div id="a" style="overflow-y: {}"><p>x</p><p>y</p></div></div>"#, v);
+        let r = build(&html);
+        assert!(r.by_id["a"].style.scroll_y);
+        assert!(r.by_id["a"].style.overflow_hidden);
+        assert!(r.warnings.is_empty());
+    }
+    let shorthand = build(r#"<div><div id="a" style="overflow: auto"><p>x</p><p>y</p></div></div>"#);
+    assert!(shorthand.by_id["a"].style.scroll_y);
+}
+
+#[test]
+fn hidden_and_visible_turn_the_scroll_off() {
+    let hidden = build(
+        r#"<div><div id="a" style="overflow-y: auto; overflow-y: hidden"><p>x</p><p>y</p></div></div>"#,
+    );
+    assert!(!hidden.by_id["a"].style.scroll_y);
+    assert!(hidden.by_id["a"].style.overflow_hidden);
+    let visible =
+        build(r#"<div><div id="a" style="overflow: auto; overflow: visible"><p>x</p><p>y</p></div></div>"#);
+    assert!(!visible.by_id["a"].style.scroll_y);
+    assert!(!visible.by_id["a"].style.overflow_hidden);
+}
+
+#[test]
+fn overflow_x_does_not_scroll_and_does_not_undo_the_vertical_scroll() {
+    let r = build(
+        r#"<div><div id="a" style="overflow-y: auto; overflow-x: hidden"><p>x</p><p>y</p></div></div>"#,
+    );
+    assert!(r.by_id["a"].style.scroll_y);
+    let auto = build(r#"<div><div id="a" style="overflow-x: auto"><p>x</p><p>y</p></div></div>"#);
+    assert!(!auto.by_id["a"].style.scroll_y);
+    assert_eq!(auto.warnings.len(), 1);
+    assert!(auto.warnings[0].message.contains("overflow-x"));
+}
+
+#[test]
+fn a_footer_region_can_scroll() {
+    let r = build(
+        r#"<div><footer id="side" style="dock: left; width: 15rem; overflow-y: auto"><p>a</p><p>b</p></footer><p>Body</p></div>"#,
+    );
+    assert!(as_box(&r.by_id["side"]).footer);
+    assert!(r.by_id["side"].style.scroll_y);
+}
+
+#[test]
+fn the_root_and_tags_that_are_not_boxes_ignore_it_with_a_warning() {
+    let root = build(r#"<div id="r" style="overflow-y: auto"><p>x</p><p>y</p></div>"#);
+    assert!(!root.by_id["r"].style.scroll_y);
+    assert_eq!(root.warnings.len(), 1);
+    assert!(root.warnings[0].message.contains("already scrolls"));
+
+    let p = build(r#"<div><p id="p" style="overflow-y: auto">x</p></div>"#);
+    assert!(!p.by_id["p"].style.scroll_y);
+    assert_eq!(p.warnings.len(), 1);
+    assert!(p.warnings[0].message.contains("<p>"));
+}
+
+#[test]
+fn virtual_and_absolute_children_ignore_the_scroll() {
+    let v = build(r#"<div><div id="a" virtual style="overflow-y: auto"><p>x</p><p>y</p></div></div>"#);
+    assert!(!v.by_id["a"].style.scroll_y);
+    assert_eq!(v.warnings.len(), 1);
+
+    let a = build(
+        r#"<div><div id="a" style="overflow-y: auto"><p>x</p><p style="position: absolute; top: 0">y</p></div></div>"#,
+    );
+    assert!(!a.by_id["a"].style.scroll_y);
+    assert_eq!(a.warnings.len(), 1);
+}
+
+#[test]
+fn an_invalid_overflow_value_warns() {
+    let r = build(r#"<div><div id="a" style="overflow-y: sideways"><p>x</p><p>y</p></div></div>"#);
+    assert_eq!(r.warnings.len(), 1);
+    assert!(r.warnings[0].message.contains("sideways"));
+}
+
+#[test]
+fn the_differ_replaces_the_box_when_the_scroll_is_turned_on_or_off() {
+    let off = build(r#"<div><div id="a" style="overflow-y: hidden"><p>x</p><p>y</p></div></div>"#).root;
+    let on = build(r#"<div><div id="a" style="overflow-y: auto"><p>x</p><p>y</p></div></div>"#).root;
+    assert!(differ::diff(Some(&off), &on).iter().any(|c| matches!(c, Change::Replace { .. })));
+}
+
+#[test]
+fn progress_without_value_is_indeterminate() {
+    let r = build(r#"<div><progress id="p"></progress></div>"#);
+    assert_eq!(progress_of(&r, "p"), (None, 1.0, false));
+    assert_eq!(r.by_id["p"].progress_fraction(), Some(0.0));
+}
+
+#[test]
+fn progress_value_and_max_give_the_fraction() {
+    let r = build(r#"<div><progress id="p" value="3" max="12"></progress></div>"#);
+    assert_eq!(progress_of(&r, "p").0, Some(3.0));
+    assert!((r.by_id["p"].progress_fraction().unwrap() - 0.25).abs() < 0.0001);
+    let over = build(r#"<div><progress id="p" value="5"></progress></div>"#);
+    assert_eq!(over.by_id["p"].progress_fraction(), Some(1.0));
+}
+
+#[test]
+fn circular_progress_has_a_square_default_size() {
+    let r = build(r#"<div><progress id="p" circular></progress></div>"#);
+    assert!(progress_of(&r, "p").2);
+    assert_eq!(r.by_id["p"].style.width, r.by_id["p"].style.height);
+}
+
+#[test]
+fn progress_colors_come_from_color_and_background_color() {
+    let r = build(
+        r#"<div><progress id="p" value="1" style="color: #ff0000; background-color: #00ff00"></progress></div>"#,
+    );
+    assert_eq!(r.by_id["p"].style.text_color, 0xFFFF_0000);
+    assert_eq!(r.by_id["p"].style.background_color, 0xFF00_FF00);
+}
+
+#[test]
+fn invalid_progress_attributes_are_errors() {
+    assert!(error_of(r#"<div><progress value="abc"></progress></div>"#).contains("value"));
+    assert!(error_of(r#"<div><progress max="0"></progress></div>"#).contains("max"));
+    assert!(error_of(r#"<div><progress max="x"></progress></div>"#).contains("max"));
+}
+
+#[test]
+fn the_differ_updates_attributes_when_the_progress_value_changes() {
+    let a = build(r#"<div><progress id="p" value="1" max="4"></progress></div>"#).root;
+    let b = build(r#"<div><progress id="p" value="2" max="4"></progress></div>"#).root;
+    let changes = differ::diff(Some(&a), &b);
+    assert_eq!(changes.len(), 1);
+    assert!(matches!(changes[0], Change::UpdateAttributes { .. }));
+    assert!(differ::diff(Some(&a), &a).is_empty());
+}
