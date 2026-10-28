@@ -39,6 +39,7 @@ fn compare(a: &Native, n: &Native, removed: &mut Vec<Change>, rest: &mut Vec<Cha
             || ab.header != nb.header
             || ab.footer != nb.footer
             || ab.has_absolute != nb.has_absolute
+            || a.style.scroll_y != n.style.scroll_y
         {
             rest.push(Change::Replace { key: n.key.clone(), node: n.clone() });
             return;
@@ -97,6 +98,10 @@ fn attributes_differ(a: &Native, n: &Native) -> bool {
             NativeKind::Image { source: s2, description: d2 },
         ) => s1 != s2 || d1 != d2,
         (NativeKind::Item { marker: m1, .. }, NativeKind::Item { marker: m2, .. }) => m1 != m2,
+        (
+            NativeKind::Progress { value: v1, max: x1, circular: c1 },
+            NativeKind::Progress { value: v2, max: x2, circular: c2 },
+        ) => v1 != v2 || x1 != x2 || c1 != c2,
         _ => false,
     }
 }
